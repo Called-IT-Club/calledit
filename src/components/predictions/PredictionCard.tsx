@@ -8,10 +8,12 @@ import Link from 'next/link';
 interface PredictionCardProps {
     prediction: Prediction;
     onUpdateOutcome: (id: string, outcome: 'true' | 'false', evidenceImageUrl?: string) => void;
+    onDelete?: (id: string) => void;
 }
 
-export default function PredictionCard({ prediction, onUpdateOutcome, isReadOnly = false }: PredictionCardProps & { isReadOnly?: boolean }) {
+export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, isReadOnly = false }: PredictionCardProps & { isReadOnly?: boolean }) {
     const [showOutcomeMenu, setShowOutcomeMenu] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [celebrating, setCelebrating] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
@@ -62,8 +64,6 @@ export default function PredictionCard({ prediction, onUpdateOutcome, isReadOnly
         };
         return info[prediction.category] || info.technology;
     };
-
-    // ... (rest of function)
 
     const getOutcomeInfo = () => {
         if (prediction.outcome === 'true') {
@@ -124,14 +124,43 @@ export default function PredictionCard({ prediction, onUpdateOutcome, isReadOnly
                 </div>
             )}
 
-            {/* Header: Category & Date */}
+            {/* Header: Author & Date */}
             <div className="flex items-center justify-between mb-3">
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-bold uppercase tracking-wider ${categoryInfo.color}`}>
-                    <span>{categoryInfo.emoji}</span>
-                    <span>{categoryInfo.label}</span>
+                <div className="flex items-center gap-2">
+                    {prediction.author && (
+                        <div className="flex items-center gap-2 mr-2">
+                            <img
+                                src={prediction.author.avatarUrl || `https://ui-avatars.com/api/?name=${prediction.author.name}&background=random`}
+                                alt={prediction.author.name}
+                                className="w-8 h-8 rounded-full border border-gray-100"
+                            />
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-gray-900 leading-none">
+                                    {prediction.author.name}
+                                </span>
+                                {prediction.author.username && (
+                                    <span className="text-[10px] text-gray-400 leading-none">
+                                        @{prediction.author.username}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-bold uppercase tracking-wider ${categoryInfo.color}`}>
+                        <span>{categoryInfo.emoji}</span>
+                        <span>{categoryInfo.label}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 font-medium tracking-wide">
-                    {formatDate(prediction.createdAt)}
+
+                <div className="flex items-center gap-2">
+                    {/* @ts-ignore */}
+                    {prediction.is_private && (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">🔒 Private</span>
+                    )}
+                    <div className="text-xs text-gray-400 font-medium tracking-wide">
+                        {formatDate(prediction.createdAt)}
+                    </div>
                 </div>
             </div>
 
@@ -231,6 +260,39 @@ export default function PredictionCard({ prediction, onUpdateOutcome, isReadOnly
                         >
                             <span>💰</span> {AFFILIATE_LINKS[prediction.category]!.label}
                         </a>
+                    )}
+
+                    {/* Delete Button / Confirmation */}
+                    {onDelete && (
+                        showDeleteConfirm ? (
+                            <div className="flex items-center bg-red-50 rounded px-1 animate-in slide-in-from-right-2 duration-200">
+                                <span className="text-[10px] text-red-800 font-bold mr-2 uppercase">Sure?</span>
+
+                                <button
+                                    onClick={() => onDelete(prediction.id)}
+                                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded mr-1"
+                                    title="Confirm Delete"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded"
+                                    title="Cancel"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                title="Delete Call"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        )
                     )}
 
                     <Link

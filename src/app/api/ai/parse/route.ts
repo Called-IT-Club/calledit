@@ -1,57 +1,87 @@
+import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+
+const schema = {
+    description: "Prediction analysis result",
+    type: SchemaType.OBJECT,
+    properties: {
+        category: {
+            type: SchemaType.STRING,
+            enum: ['sports', 'world-events', 'financial-markets', 'politics', 'entertainment', 'technology', 'not-on-my-bingo']
+        },
+        targetDate: {
+            type: SchemaType.STRING,
+            description: "YYYY-MM-DD format"
+        },
+        meta: {
+            type: SchemaType.OBJECT,
+            properties: {
+                tags: {
+                    type: SchemaType.ARRAY,
+                    items: { type: SchemaType.STRING }
+                },
+                entities: {
+                    type: SchemaType.ARRAY,
+                    items: { type: SchemaType.STRING }
+                },
+                subject: { type: SchemaType.STRING },
+                action: { type: SchemaType.STRING },
+                confidence: { type: SchemaType.NUMBER }
+            },
+            required: ["tags", "entities", "subject", "action", "confidence"]
+        }
+    },
+    required: ["category", "targetDate", "meta"]
+};
 
 export async function POST(req: Request) {
     try {
-        const { text } = await req.json();
-
-        // Prompt for the AI
-        const prompt = `
-            Analyze this prediction: "${text}"
-            
-            You are a prediction parser. Extract structured data from the text.
-            
-            Return JSON with:
-            1. category: (one of: 'sports', 'world-events', 'financial-markets', 'politics', 'entertainment', 'technology', 'not-on-my-bingo')
-            2. targetDate: (YYYY-MM-DD format, relative to today ${new Date().toISOString().split('T')[0]})
-            3. meta: {
-                tags: string[],      // General keywords (e.g. "NBA", "Crypto", "Election")
-                entities: string[],  // Specific proper nouns (e.g. "Lakers", "Bitcoin", "Trump")
-                subject: string,     // The main subject
-                action: string,      // What they will do
-                confidence: number   // 0-1 score
-            }
-
-            Respond ONLY with the JSON.
-        `;
-
-        // Call Ollama
-        const response = await fetch('http://localhost:11434/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'llama3.2',
-                prompt: prompt,
-                stream: false,
-                format: 'json'
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error('Ollama connection failed');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const data = await response.json();
+        const { text } = await req.json();
 
-        try {
-            const parsed = JSON.parse(data.response);
-            return NextResponse.json(parsed);
-        } catch (e) {
-            console.error('Failed to parse AI response:', data.response);
+        // Security: Scrub & Limit Input
+        // 1. Trim whitespace
+        // 2. Limit to 280 characters (same as frontend)
+        // 3. Remove invisible control characters (basic sanitization)
+        const cleanText = (text || '')
+            .toString()
+            .trim()
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control chars
+            .slice(0, 280);
+
+        if (!cleanText) {
             return NextResponse.json({
                 category: 'not-on-my-bingo',
                 meta: { tags: [], entities: [] }
             });
         }
+
+        // Prompt for the AI
+
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+
+        const prompt = `
+            Analyze this prediction: "${cleanText}"
+            Extract structured data relative to today: ${new Date().toISOString().split('T')[0]}
+        `;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        return NextResponse.json(JSON.parse(responseText));
 
     } catch (error) {
         console.error('AI Parse Error:', error);

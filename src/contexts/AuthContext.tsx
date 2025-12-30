@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -8,9 +9,9 @@ interface AuthContextType {
     user: User | null;
     session: Session | null;
     isLoading: boolean;
+    isAdmin: boolean;
     signInWithGoogle: () => Promise<void>;
     signInWithApple: () => Promise<void>;
-    signInAsGuest: () => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -20,24 +21,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
+            if (session?.user) {
+                await checkAdminRole(session.user.id);
+            }
             setIsLoading(false);
         });
 
         // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
+            if (session?.user) {
+                await checkAdminRole(session.user.id);
+            } else {
+                setIsAdmin(false);
+            }
             setIsLoading(false);
         });
 
         return () => subscription.unsubscribe();
     }, []);
+
+    const checkAdminRole = async (userId: string) => {
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', userId)
+                .single();
+
+            console.log('Admin Check:', { userId, role: data?.role });
+            const isAdminUser = data?.role?.toLowerCase() === 'admin';
+            setIsAdmin(isAdminUser);
+        } catch (err) {
+            console.error('Error fetching role:', err);
+            setIsAdmin(false);
+        }
+    };
 
     const signInWithGoogle = async () => {
         await supabase.auth.signInWithOAuth({
@@ -57,17 +84,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    const signInAsGuest = async () => {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
-    };
+    const router = useRouter();
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error('Error signing out:', error);
+        } finally {
+            // Visual feedback
+            // window.alert("Signing out... please wait.");
+
+            // 1. Force local state clear
+            setUser(null);
+            setSession(null);
+            setIsAdmin(false);
+
+            // 2. Nuke cookies manually (Robust Version)
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+
+            // 3. Clear LocalStorage & SessionStorage
+            if (typeof window !== 'undefined') {
+                window.localStorage.clear();
+                window.sessionStorage.clear();
+
+                // 4. Force Hard Reload
+                window.location.href = '/';
+            }
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, isLoading, signInWithGoogle, signInWithApple, signInAsGuest, signOut }}>
+        <AuthContext.Provider value={{ user, session, isLoading, isAdmin, signInWithGoogle, signInWithApple, signOut }}>
             {children}
         </AuthContext.Provider>
     );

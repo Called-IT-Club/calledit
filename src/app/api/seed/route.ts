@@ -43,11 +43,14 @@ const CATEGORIES = ['technology', 'sports', 'entertainment', 'crypto', 'world'];
 
 export async function POST(request: Request) {
     try {
-        const { userId } = await request.json();
+        // Authenticate User
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (!userId) {
-            return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const userId = user.id;
 
         // Generate 20 random predictions per call
         const predictionsWithUser = Array.from({ length: 20 }).map(() => {

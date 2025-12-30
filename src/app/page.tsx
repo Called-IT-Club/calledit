@@ -7,10 +7,14 @@ export default function HomePage() {
     <div className="flex-1 flex flex-col items-center justify-center px-4 min-h-screen py-10">
       <div className="max-w-4xl w-full grid md:grid-cols-2 gap-12 items-center">
         {/* Left Col: Text */}
-        <div className="space-y-8 fade-in text-center md:text-left">
+        <div className="space-y-8 fade-in text-left">
           <h1 className="text-6xl md:text-7xl font-black italic tracking-tighter text-blue-700 mb-2">
             CALLED IT!
           </h1>
+
+          <p className="text-lg font-medium text-gray-500 mb-4 tracking-wide">
+            Join the Club. Make the Call.
+          </p>
 
           <p className="text-xl text-gray-600 leading-relaxed">
             Make predictions. Track outcomes.<br />Prove you saw it coming.

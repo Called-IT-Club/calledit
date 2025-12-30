@@ -53,7 +53,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const isCalled = prediction.outcome === 'true';
     const isMissed = prediction.outcome === 'false';
-    const authorName = "Anonymous Oracle";
+    const { data: author } = await supabase
+        .from('profiles')
+        .select('full_name, username, email')
+        .eq('id', prediction.user_id)
+        .single();
+
+    const displayName = author?.full_name || author?.username || author?.email?.split('@')[0] || "Anonymous Oracle";
+    const authorName = displayName.split(' ')[0];
 
     return new ImageResponse(
         (
@@ -67,9 +74,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 position: 'relative',
             }}>
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '40px' }}>
-                    <div style={{ color: '#1e40af', fontSize: 24, fontWeight: 900, fontStyle: 'italic', letterSpacing: '-1px' }}>
-                        CALLED IT!
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '40px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ color: '#1e40af', fontSize: 24, fontWeight: 900, fontStyle: 'italic', letterSpacing: '-1px' }}>
+                            CALLED IT!
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', marginTop: 4, letterSpacing: '0.5px' }}>
+                            Join the Club. Make the Call.
+                        </div>
                     </div>
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 6,
@@ -111,7 +123,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                             borderRadius: 50,
                             border: '4px solid white',
                         }}>
-                            ✅ CALLED IT!
+                            ✅ CAALLLLEDD IT!!!
                         </div>
                     )}
 

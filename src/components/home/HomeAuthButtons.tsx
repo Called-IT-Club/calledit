@@ -1,25 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function HomeAuthButtons() {
-    const { signInWithGoogle, signInWithApple, signInAsGuest, user } = useAuth();
+    const { signInWithGoogle, signInWithApple, user, isLoading } = useAuth();
     const router = useRouter();
 
-    if (user) {
-        router.push('/dashboard');
-        return null;
-    }
-
-    const handleGuestLogin = async () => {
-        try {
-            await signInAsGuest();
+    useEffect(() => {
+        if (!isLoading && user) {
             router.push('/dashboard');
-        } catch (error) {
-            console.error('Guest login failed:', error);
         }
-    };
+    }, [user, isLoading, router]);
+
+    if (isLoading || user) return null;
 
     return (
         <div className="flex flex-col gap-3 w-full max-w-sm mx-auto md:mx-0">
@@ -37,13 +32,6 @@ export default function HomeAuthButtons() {
             >
                 <img src="https://www.svgrepo.com/show/445136/apple.svg" className="w-6 h-6" alt="Apple" />
                 <span>Sign in with Apple</span>
-            </button>
-
-            <button
-                onClick={handleGuestLogin}
-                className="btn bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 flex items-center justify-center gap-2 py-2 text-sm w-full transition-colors mt-2"
-            >
-                Continue as Guest 👤
             </button>
         </div>
     );

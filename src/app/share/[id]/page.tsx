@@ -4,7 +4,6 @@ import { use, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Prediction, User } from '@/types';
 import Link from 'next/link';
-import html2canvas from 'html2canvas';
 import { useRef } from 'react';
 
 export default function SharePage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,47 +24,50 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // 1. Fetch Prediction from Supabase
-                const { data: predData, error: predError } = await supabase
-                    .from('predictions')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                // Fetch from API
+                const res = await fetch(`/api/predictions/${id}`, { cache: 'no-store' });
 
-                if (predError || !predData) throw new Error('Prediction not found');
+                if (!res.ok) {
+                    // Try to parse error
+                    let errMsg = 'Prediction not found';
+                    try { const json = await res.json(); if (json.error) errMsg = json.error; } catch (e) { }
+                    throw new Error(errMsg);
+                }
 
-                // Map DB snake_case to CamelCase if needed, or use raw if mapped
-                // The Type expects camelCase, but DB returns snake_case. 
-                // We need to map it similar to the feed.
-                const mappedPrediction = {
-                    id: predData.id,
-                    userId: predData.user_id,
-                    category: predData.category,
-                    prediction: predData.prediction,
-                    createdAt: predData.created_at,
-                    targetDate: predData.target_date,
-                    outcome: predData.outcome || 'pending',
-                    evidenceImageUrl: predData.evidence_image_url,
-                    meta: predData.meta
-                } as Prediction;
+                const { prediction: mappedPrediction } = await res.json();
 
                 setPrediction(mappedPrediction);
 
-                // 2. Fetch Author (Guest User handling)
-                // Since these are guest users, they might not be in a public users table or might be anonymous.
-                // For now, we'll dummy this or fetch if you have a `users` table.
-                // Assuming `users` table exists in Supabase:
-                // const { data: authorData } = await supabase.from('users').select('*').eq('id', mappedPrediction.userId).single();
-                setAuthor({ id: mappedPrediction.userId, email: '', name: 'Anonymous Oracle', provider: 'email' });
+                // Set Author from mapped prediction (which now includes it)
+                if (mappedPrediction.author) {
+                    setAuthor({
+                        id: mappedPrediction.userId,
+                        email: '', // Not strictly needed for display
+                        name: mappedPrediction.author.name,
+                        provider: 'email',
+                        // role: authorData.role // Not exposed by mapper yet, but okay for display
+                    });
+                } else {
+                    setAuthor({ id: mappedPrediction.userId, email: '', name: 'Authenticated', provider: 'email' });
+                }
 
                 // 3. Check Protocol
-                if (mappedPrediction.userId === currentUserId) {
+                // To do this strictly "IsMe", we need to know who "I" am.
+                // We can get that from client side auth context or just ignore for share page.
+                // The original code mocked currentUserId = 'user-1' anyway or checked auth.
+                // We'll leave the auth check to a separate useEffect if needed, but for public share it's visual.
+                // Let's quickly check auth status purely for the "Edit" button if it existed
+                // BUT, the share page is mostly read-only.
+
+                // If we have a user in session, we can check.
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user && user.id === mappedPrediction.userId) {
                     setIsMe(true);
                 }
 
-            } catch (err) {
+            } catch (err: any) {
                 console.error(err);
-                setError('Could not find this prediction');
+                setError(err.message || 'Could not find this prediction'); // Show actual error
             } finally {
                 setLoading(false);
             }
@@ -158,11 +160,18 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
         if (!cardRef.current) return;
 
         try {
+            // Dynamically import html2canvas (Handle both ESM and CJS)
+            const mod = await import('html2canvas');
+            const html2canvas = mod.default || mod;
+
+            // @ts-ignore - html2canvas has some typing issues with dynamic imports sometimes
             const canvas = await html2canvas(cardRef.current, {
                 scale: 2,
                 backgroundColor: null,
                 useCORS: true,
-                logging: false,
+                logging: true, // DEBUG: Enabled logging
+                allowTaint: true, // Allow taint just in case, though useCORS is better
+                proxy: undefined,
             });
 
             // Convert to Blob for sharing
@@ -247,10 +256,13 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
 
                         {/* Top Bar: Brand & Category */}
                         <div className="relative z-10 p-8 flex justify-between items-start">
-                            <div>
-                                <Link href="/" className="font-black italic tracking-tighter text-xl no-underline" style={{ color: '#1e40af' }}>
+                            <div className="text-left">
+                                <Link href="/" className="font-black italic tracking-tighter text-xl no-underline block" style={{ color: '#1e40af' }}>
                                     CALLED IT!
                                 </Link>
+                                <div className="text-xs font-medium tracking-wide mt-1" style={{ color: '#6b7280' }}>
+                                    Join the Club. Make the Call.
+                                </div>
                             </div>
 
                             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wider"
@@ -288,7 +300,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                                         border: '2px solid #ffffff',
                                         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
                                     }}>
-                                    ✅ CALLED IT!
+                                    ✅ CAALLLLEDD IT!!!
                                 </span>
                             </div>
                         )}
@@ -338,7 +350,21 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                                             border: '1px solid #e5e7eb',
                                             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                                         }}>
-                                        {author?.name?.[0]}
+                                        {/* Avatar or Initials */}
+                                        {author?.avatarUrl ? (
+                                            <img
+                                                src={author.avatarUrl}
+                                                alt={author.name}
+                                                // crossOrigin="anonymous" // IMPORTANT for html2canvas to not taint!
+                                                // Actually, crossOrigin needs to be on the img tag if loading from external source
+                                                // But Supabase storage / External URLs need CORS headers.
+                                                // Adding crossOrigin="anonymous" here is good practice if server supports it.
+                                                crossOrigin="anonymous"
+                                                className="w-full h-full rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            author?.name?.[0]
+                                        )}
                                     </div>
                                     <div className="text-left">
                                         <div className="font-bold" style={{ color: '#111827' }}>{author?.name || 'User'}</div>

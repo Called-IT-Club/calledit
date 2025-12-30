@@ -1,38 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mapPrediction } from '@/lib/mappers';
-import { Prediction, PredictionCategory } from '@/types';
-import CategoryTabs from '@/components/predictions/CategoryTabs';
-import PredictionCard from '@/components/predictions/PredictionCard';
-import PredictionForm from '@/components/predictions/PredictionForm';
-import LoginButton from '@/components/auth/LoginButton';
-import SponsoredCard from '@/components/ads/SponsoredCard';
-import Link from 'next/link';
 import Header from '@/components/layout/Header';
+import PredictionCard from '@/components/predictions/PredictionCard';
+import SponsoredCard from '@/components/ads/SponsoredCard';
+import PredictionForm from '@/components/predictions/PredictionForm';
+import CategoryTabs from '@/components/predictions/CategoryTabs';
+import { Prediction, Advertisement } from '@/types';
 
 export default function DashboardPage() {
+    const { user } = useAuth();
+
+    // State Definitions
     const [predictions, setPredictions] = useState<Prediction[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<PredictionCategory | 'all'>('all');
-    const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
-    const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
+    const [showForm, setShowForm] = useState(false);
+    const [ads, setAds] = useState<Advertisement[]>([]);
 
-    const filteredPredictions = selectedCategory === 'all'
+    // Filter Logic
+    const filteredPredictions = useMemo(() => selectedCategory === 'all'
         ? predictions
-        : predictions.filter(p => p.category === selectedCategory);
+        : predictions.filter(p => p.category === selectedCategory), [selectedCategory, predictions]);
 
-    const mixedItems = filteredPredictions.reduce<(Prediction | { type: 'ad', id: string })[]>((acc, curr, index) => {
+    // Mix Logic (Ads + Predictions)
+    const mixedItems = useMemo(() => filteredPredictions.reduce<(Prediction | { type: 'ad', data: Advertisement })[]>((acc, curr, index) => {
         acc.push(curr);
-        // Inject Ad every 3 items
-        if ((index + 1) % 3 === 0) {
-            acc.push({ type: 'ad', id: `ad-${index}` });
+        // Inject Ad every 5 items (less intrusive)
+        if ((index + 1) % 5 === 0 && ads.length > 0) {
+            // cycle through ads
+            const adIndex = Math.floor(index / 5) % ads.length;
+            acc.push({ type: 'ad', data: ads[adIndex] });
         }
         return acc;
-    }, []);
+    }, []), [filteredPredictions, ads]);
 
     // Reset index when items change
     useEffect(() => {
@@ -40,6 +44,7 @@ export default function DashboardPage() {
             setCurrentCardIndex(0);
         }
     }, [mixedItems.length]);
+
 
     // Keyboard navigation
     useEffect(() => {
@@ -57,88 +62,132 @@ export default function DashboardPage() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [viewMode, mixedItems.length]);
 
-    const { user } = useAuth();
-
-    // ... existing navigation useEffects ...
-
+    // Fetch Ads
     useEffect(() => {
+        const fetchAds = async () => {
+            try {
+                const res = await fetch('/api/ads');
+                if (res.ok) {
+                    const { ads: adsData } = await res.json();
+                    setAds(adsData || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch ads", err);
+            }
+        };
+        fetchAds();
+    }, []);
+
+    // Fetch Predictions when User is ready
+    useEffect(() => {
+        const fetchPredictions = async () => {
+            try {
+                if (!user) return; // Wait for user
+
+                const res = await fetch('/api/dashboard');
+
+                if (!res.ok) {
+                    if (res.status === 401) return; // session might be refreshing
+                    throw new Error('Failed to fetch dashboard data');
+                }
+
+                const { predictions: userPredictions } = await res.json();
+
+                if (userPredictions) {
+                    setPredictions(userPredictions);
+                }
+            } catch (error) {
+                console.error('Failed to fetch predictions:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (user) {
             fetchPredictions();
         } else {
-            setLoading(false);
+            // setTimeout(() => setLoading(false), 2000); // Timeout if no user loads? 
+            // Better: AuthContext should handle loading state, but for now:
+            const timer = setTimeout(() => {
+                // if still no user after 1s, maybe not logged in? 
+                // But AuthContext user is initially null.
+            }, 1000);
+            return () => clearTimeout(timer);
         }
     }, [user]);
 
-    const fetchPredictions = async () => {
-        try {
-            if (!user) return;
+    // Correction: We need a dedicated fetch function to reuse if needed, or just keep it inside useEffect.
+    // The original code had `fetchPredictions` outside. Let's keep it simple.
 
-            const { data, error } = await supabase
-                .from('predictions')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            if (data) {
-                setPredictions(data.map(mapPrediction));
-            }
-        } catch (error) {
-            console.error('Failed to fetch predictions:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleNewPrediction = async (prediction: Partial<Prediction>) => {
+    const handleNewPrediction = async (prediction: any) => {
         try {
             if (!user) {
-                alert('Please sign in to make a prediction');
+                alert('Please sign in to make a call');
                 return;
             }
 
-            const { data, error } = await supabase
-                .from('predictions')
-                .insert([{
-                    user_id: user.id,
-                    category: prediction.category,
-                    prediction: prediction.prediction,
-                    target_date: prediction.targetDate,
-                    meta: prediction.meta
-                }])
-                .select()
-                .single();
+            const res = await fetch('/api/predictions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(prediction)
+            });
 
-            if (error) throw error;
-            if (data) {
-                const newPred = mapPrediction(data);
-                setPredictions([newPred, ...predictions]);
-                setShowForm(false);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to create prediction');
             }
-        } catch (error) {
-            console.error('Failed to create prediction:', error);
+
+            const { prediction: newPred } = await res.json();
+            setPredictions([newPred, ...predictions]);
+            setShowForm(false);
+
+        } catch (error: any) {
+            console.error('Failed to create call:', error);
+            alert(`Error saving prediction: ${error.message || 'Unknown error'}`);
         }
     };
 
     const handleUpdateOutcome = async (id: string, outcome: 'true' | 'false', evidenceImageUrl?: string) => {
         try {
-            const updates: any = { outcome };
+            const updates: any = { id, outcome };
             if (evidenceImageUrl) {
-                updates.evidence_image_url = evidenceImageUrl;
+                updates.evidenceImageUrl = evidenceImageUrl;
             }
 
-            const { error } = await supabase
-                .from('predictions')
-                .update(updates)
-                .eq('id', id);
+            const res = await fetch('/api/predictions', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
 
-            if (error) throw error;
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to update prediction');
+            }
 
             setPredictions(predictions.map(p =>
                 p.id === id ? { ...p, outcome, evidenceImageUrl: evidenceImageUrl || p.evidenceImageUrl } : p
             ));
         } catch (error) {
             console.error('Failed to update prediction:', error);
+        }
+    };
+
+    const handleDeleteCall = async (id: string) => {
+        // Confirmed via UI
+        try {
+            const res = await fetch(`/api/predictions?id=${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to delete');
+            }
+
+            setPredictions(predictions.filter(p => p.id !== id));
+        } catch (error) {
+            console.error('Failed to delete call:', error);
         }
     };
 
@@ -151,12 +200,12 @@ export default function DashboardPage() {
             <main className="max-w-6xl mx-auto px-4 py-8">
                 {/* Action Bar */}
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold">My Predictions</h2>
+                    <h2 className="text-xl font-semibold">My Calls</h2>
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="btn btn-primary"
                     >
-                        {showForm ? 'Cancel' : '+ New Prediction'}
+                        {showForm ? 'Cancel' : '+ New Call'}
                     </button>
                 </div>
 
@@ -225,14 +274,15 @@ export default function DashboardPage() {
                         {viewMode === 'list' ? (
                             /* List View */
                             <div className="space-y-4">
-                                {mixedItems.map((item) => (
-                                    <div key={'id' in item ? item.id : item.id}>
+                                {mixedItems.map((item, index) => (
+                                    <div key={'id' in item ? item.id : `mixed-${index}`}>
                                         {'type' in item && item.type === 'ad' ? (
-                                            <SponsoredCard />
+                                            <SponsoredCard ad={(item as any).data} />
                                         ) : (
                                             <PredictionCard
                                                 prediction={item as Prediction}
                                                 onUpdateOutcome={handleUpdateOutcome}
+                                                onDelete={handleDeleteCall}
                                             />
                                         )}
                                     </div>
@@ -245,11 +295,12 @@ export default function DashboardPage() {
                                     {/* Card Container */}
                                     <div className="transition-all duration-300 transform">
                                         {'type' in mixedItems[currentCardIndex] && (mixedItems[currentCardIndex] as any).type === 'ad' ? (
-                                            <SponsoredCard />
+                                            <SponsoredCard ad={(mixedItems[currentCardIndex] as any).data} />
                                         ) : (
                                             <PredictionCard
                                                 prediction={mixedItems[currentCardIndex] as Prediction}
                                                 onUpdateOutcome={handleUpdateOutcome}
+                                                onDelete={handleDeleteCall}
                                             />
                                         )}
                                     </div>

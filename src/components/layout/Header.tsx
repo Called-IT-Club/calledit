@@ -14,9 +14,14 @@ export default function Header() {
             <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                 {/* Brand / Logo */}
                 <Link href="/" className="hover:opacity-80 transition-opacity">
-                    <h1 className="text-2xl font-black italic tracking-tighter text-blue-700">
-                        CALLED IT!
-                    </h1>
+                    <div>
+                        <h1 className="text-2xl font-black italic tracking-tighter text-blue-700">
+                            CALLED IT!
+                        </h1>
+                        <p className="text-[10px] font-medium text-gray-500 tracking-wide">
+                            Join the Club. Make the Call.
+                        </p>
+                    </div>
                 </Link>
 
                 {/* Navigation & Auth */}
@@ -27,7 +32,7 @@ export default function Header() {
                             href="/dashboard"
                             className="hidden sm:inline-block text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-md transition-colors"
                         >
-                            My Dashboard
+                            My Calls
                         </Link>
                     )}
 

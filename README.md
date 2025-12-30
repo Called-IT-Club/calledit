@@ -24,26 +24,12 @@ A simple, beautiful predictions app. Make your calls across sports, world events
 npm install
 ```
 
-2. Install mock API dependencies:
-```bash
-cd mock-api
-npm install
-cd ..
-```
+
 
 ### Running the App
 
-You need to run both the Next.js app and the mock API server:
-
-**Terminal 1 - Next.js App:**
 ```bash
 npm run dev
-```
-
-**Terminal 2 - Mock API:**
-```bash
-cd mock-api
-npm start
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -52,7 +38,6 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
 - **Frontend**: Next.js 15, React 19, TypeScript
 - **Styling**: Tailwind CSS
-- **Backend** (Development): Express.js mock API
 - **AI**: Simple keyword-based categorization (ready for real AI integration)
 
 ## Project Structure
@@ -71,10 +56,6 @@ icallit/
 │   │   │   ├── PredictionCard.tsx
 │   │   │   └── PredictionForm.tsx
 │   └── types/                  # TypeScript types
-├── mock-api/
-│   ├── data/
-│   │   └── predictions.json    # Mock data store
-│   └── server.js               # Express API server
 └── public/                     # Static assets
 ```
 

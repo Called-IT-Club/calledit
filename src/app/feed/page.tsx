@@ -37,22 +37,30 @@ export default function LiveFeedPage() {
     // 1. Fetch Initial Data
     useEffect(() => {
         const fetchInitialData = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('predictions')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(PAGE_SIZE);
+            // Safety timeout (10s) to handle Supabase cold starts
+            const timer = setTimeout(() => {
+                console.warn('Feed fetch timed out');
+                setLoading(false);
+            }, 10000);
 
-                if (error) throw error;
-                if (data) {
-                    const mapped = data.map(mapPrediction);
-                    setPredictions(mapped);
-                    if (data.length < PAGE_SIZE) setHasMore(false);
+            try {
+                console.log('Fetching feed data from API...');
+                const res = await fetch(`/api/feed?limit=${PAGE_SIZE}`);
+
+                if (!res.ok) throw new Error('Failed to fetch feed');
+
+                const { predictions: newPredictions } = await res.json();
+
+                if (newPredictions) {
+                    console.log('Feed data received:', newPredictions.length);
+                    setPredictions(newPredictions);
+                    if (newPredictions.length < PAGE_SIZE) setHasMore(false);
                 }
             } catch (err) {
                 console.error('Error fetching feed:', err);
+                // alert('Error loading feed. Check console.');
             } finally {
+                clearTimeout(timer);
                 setLoading(false);
             }
         };
@@ -73,19 +81,15 @@ export default function LiveFeedPage() {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('predictions')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .lt('created_at', lastItem.createdAt) // Cursor: older than last item
-                .limit(PAGE_SIZE);
+            const res = await fetch(`/api/feed?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(lastItem.createdAt)}`);
 
-            if (error) throw error;
+            if (!res.ok) throw new Error('Failed to load more');
 
-            if (data && data.length > 0) {
-                const newItems = data.map(mapPrediction);
+            const { predictions: newItems } = await res.json();
+
+            if (newItems && newItems.length > 0) {
                 setPredictions(prev => [...prev, ...newItems]);
-                if (data.length < PAGE_SIZE) setHasMore(false);
+                if (newItems.length < PAGE_SIZE) setHasMore(false);
             } else {
                 setHasMore(false);
             }
@@ -107,10 +111,18 @@ export default function LiveFeedPage() {
                     schema: 'public',
                     table: 'predictions'
                 },
-                (payload) => {
-                    const newPrediction = mapPrediction(payload.new);
-                    // Add new item to top (Realtime)
-                    setPredictions(prev => [newPrediction, ...prev]);
+                async (payload) => {
+                    // Fetch full data with profile
+                    const { data } = await supabase
+                        .from('predictions')
+                        .select('*, profiles(*)')
+                        .eq('id', payload.new.id)
+                        .single();
+
+                    if (data) {
+                        const newPrediction = mapPrediction(data);
+                        setPredictions(prev => [newPrediction, ...prev]);
+                    }
                 }
             )
             .subscribe();

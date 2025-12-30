@@ -19,6 +19,11 @@ export interface Prediction {
         action?: string;
         confidence?: number;
     };
+    author?: {
+        name: string;
+        username?: string;
+        avatarUrl?: string;
+    };
 }
 
 export interface User {
@@ -27,4 +32,27 @@ export interface User {
     name?: string;
     provider: 'email' | 'google' | 'apple';
     following?: string[];
+    role?: 'user' | 'admin' | 'moderator';
+}
+
+export interface Profile {
+    id: string;
+    email: string;
+    role: 'user' | 'admin' | 'moderator';
+    username?: string;
+    full_name?: string;
+    avatar_url?: string;
+}
+
+export interface Advertisement {
+    id: string;
+    title: string;
+    description?: string;
+    image_url?: string;
+    link_url: string;
+    cta_text: string;
+    category?: PredictionCategory;
+    is_active: boolean;
+    views?: number; // Virtual field for UI
+    clicks?: number; // Virtual field for UI
 }

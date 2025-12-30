@@ -13,39 +13,56 @@ interface PredictionFormProps {
 }
 
 export default function PredictionForm({ onSubmit, onCancel }: PredictionFormProps) {
+    const [isPrivate, setIsPrivate] = useState(false);
+
     const [prediction, setPrediction] = useState('');
     const [targetDate, setTargetDate] = useState('');
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiCategory, setAiCategory] = useState<PredictionCategory | null>(null);
     const [aiMeta, setAiMeta] = useState<any>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const analyzePrediction = async () => {
         if (!prediction.trim()) return;
 
         setIsAnalyzing(true);
-        setAiMeta(null);
-        console.log('Sending to AI:', prediction);
-
         try {
-            const res = await fetch('http://localhost:3001/api/ai/parse', {
+            // Call the shared API route for analysis
+            const response = await fetch('/api/predictions/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: prediction })
+                body: JSON.stringify({ text: prediction }),
             });
 
-            const data = await res.json();
-            console.log('AI Response:', data);
-
-            if (data.category) setAiCategory(data.category as PredictionCategory);
-            if (data.targetDate) setTargetDate(data.targetDate);
-            if (data.meta) setAiMeta(data.meta);
-
+            const result = await response.json();
+            if (result.category) {
+                setAiCategory(result.category);
+                setAiMeta({
+                    tags: result.tags,
+                    entities: result.entities,
+                    confidence: result.confidence
+                });
+                if (result.targetDate) {
+                    setTargetDate(result.targetDate);
+                }
+            }
         } catch (error) {
             console.error('AI Analysis failed:', error);
-            // Fallback (optional)
         } finally {
             setIsAnalyzing(false);
         }
+    };
+
+    const getCategoryInfo = (cat: PredictionCategory) => {
+        const map: Record<PredictionCategory, { label: string; emoji: string }> = {
+            'sports': { label: 'Sports', emoji: '⚽' },
+            'financial-markets': { label: 'Finance', emoji: '📈' },
+            'politics': { label: 'Politics', emoji: '⚖️' },
+            'world-events': { label: 'World', emoji: '🌍' },
+            'entertainment': { label: 'Entertainment', emoji: '🎬' },
+            'technology': { label: 'Tech', emoji: '💻' },
+            'not-on-my-bingo': { label: 'Bingo', emoji: '🎲' }
+        };
+        return map[cat] || { label: 'Other', emoji: '❓' };
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -57,6 +74,7 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
             category: aiCategory,
             targetDate: targetDate || undefined,
             meta: aiMeta || undefined,
+            isPrivate,
         });
 
         // Reset form
@@ -64,31 +82,21 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
         setTargetDate('');
         setAiCategory(null);
         setAiMeta(null);
+        setIsPrivate(false);
     };
 
-    const getCategoryInfo = (cat: PredictionCategory) => {
-        const info = {
-            'not-on-my-bingo': { emoji: '🎯', label: 'On My Bingo', color: 'purple' },
-            'sports': { emoji: '⚽', label: 'Sports', color: 'blue' },
-            'world-events': { emoji: '🌍', label: 'World Events', color: 'red' },
-            'financial-markets': { emoji: '📈', label: 'Financial Markets', color: 'green' },
-            'politics': { emoji: '🏛️', label: 'Politics', color: 'orange' },
-            'entertainment': { emoji: '🎬', label: 'Entertainment', color: 'pink' },
-            'technology': { emoji: '🤖', label: 'Technology', color: 'indigo' },
-        };
-        return info[cat] || info['not-on-my-bingo'];
-    };
+    // ... existing helper functions ...
 
     return (
         <div className="card p-6">
-            <h3 className="text-lg font-semibold mb-4">Make a Prediction (AI Powered)</h3>
+            <h3 className="text-lg font-semibold mb-4">Make a Call (AI Powered)</h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Prediction Input */}
                 <div>
                     <div className="flex justify-between items-center mb-2">
                         <label className="block text-sm font-medium">
-                            What do you predict?
+                            What is your call?
                         </label>
                         <button
                             type="button"
@@ -114,10 +122,16 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                         rows={3}
                         required
+                        maxLength={280}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                        Use the Auto-Detect button to let AI fill in the details!
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500">
+                            Use the Auto-Detect button to let AI fill in the details!
+                        </p>
+                        <span className={`text-xs font-medium ${prediction.length >= 260 ? 'text-red-500' : 'text-gray-400'}`}>
+                            {prediction.length}/280
+                        </span>
+                    </div>
                 </div>
 
                 {/* AI Meta Display (Tags & Entities) */}
@@ -223,7 +237,7 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                         disabled={!prediction.trim() || !aiCategory}
                         className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Create Prediction
+                        Make Call
                     </button>
                     <button
                         type="button"
