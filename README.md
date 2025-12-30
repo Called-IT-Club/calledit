@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# I Call It
+
+A simple, beautiful predictions app. Make your calls across sports, world events, stocks & markets, and personal predictions.
+
+## Features
+
+- 🎯 **AI-Powered Categorization**: Just type your prediction and let AI determine the category
+- 📊 **Category-Based Organization**: Sports, World Events, Stocks & Markets, Personal predictions
+- 🎉 **Celebration Animations**: Cards celebrate when your predictions come true!
+- 📱 **Mobile-First Design**: Clean, responsive interface
+- 🔗 **Simple Sharing**: Share your predictions with a single click
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ installed
+- npm or yarn
+
+### Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install mock API dependencies:
+```bash
+cd mock-api
+npm install
+cd ..
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Running the App
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+You need to run both the Next.js app and the mock API server:
 
-## Learn More
+**Terminal 1 - Next.js App:**
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+**Terminal 2 - Mock API:**
+```bash
+cd mock-api
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Backend** (Development): Express.js mock API
+- **AI**: Simple keyword-based categorization (ready for real AI integration)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+icallit/
+├── src/
+│   ├── app/                    # Next.js app router pages
+│   │   ├── dashboard/          # Main dashboard
+│   │   ├── globals.css         # Global styles & animations
+│   │   ├── layout.tsx          # Root layout
+│   │   └── page.tsx            # Landing page
+│   ├── components/
+│   │   ├── predictions/        # Prediction components
+│   │   │   ├── CategoryTabs.tsx
+│   │   │   ├── PredictionCard.tsx
+│   │   │   └── PredictionForm.tsx
+│   └── types/                  # TypeScript types
+├── mock-api/
+│   ├── data/
+│   │   └── predictions.json    # Mock data store
+│   └── server.js               # Express API server
+└── public/                     # Static assets
+```
+
+## License
+
+MIT
