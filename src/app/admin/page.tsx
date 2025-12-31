@@ -70,7 +70,7 @@ export default function AdminPage() {
 
             setIsCreating(false);
             setEditingId(null);
-            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true, description: '', image_url: '', category: null });
+            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true, description: '', image_url: '', category: undefined });
             fetchAds();
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -144,7 +144,7 @@ export default function AdminPage() {
                         setIsCreating(!isCreating);
                         if (!isCreating) {
                             setEditingId(null);
-                            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true });
+                            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true, category: undefined });
                         }
                     }} className="btn btn-primary">
                         {isCreating ? 'Cancel' : '+ Create Ad'}
@@ -180,7 +180,7 @@ export default function AdminPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Category Target</label>
-                                    <select className="w-full border p-2 rounded" value={newAd.category || ''} onChange={e => setNewAd({ ...newAd, category: (e.target.value as Advertisement['category']) || null })}>
+                                    <select className="w-full border p-2 rounded" value={newAd.category || ''} onChange={e => setNewAd({ ...newAd, category: (e.target.value as Advertisement['category']) || undefined })}>
                                         <option value="">Global (All Categories)</option>
                                         <option value="sports">Sports</option>
                                         <option value="politics">Politics</option>

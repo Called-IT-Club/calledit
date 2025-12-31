@@ -7,7 +7,7 @@ import PredictionCard from '@/components/predictions/PredictionCard';
 import SponsoredCard from '@/components/ads/SponsoredCard';
 import PredictionForm from '@/components/predictions/PredictionForm';
 import CategoryTabs from '@/components/predictions/CategoryTabs';
-import { Prediction, Advertisement, Affiliate } from '@/types';
+import { Prediction, Advertisement, Affiliate, PredictionCategory } from '@/types';
 
 export default function DashboardPage() {
     const { user } = useAuth();
@@ -16,7 +16,7 @@ export default function DashboardPage() {
     const [predictions, setPredictions] = useState<Prediction[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
-    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [selectedCategory, setSelectedCategory] = useState<PredictionCategory | 'all'>('all');
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showForm, setShowForm] = useState(false);
     const [ads, setAds] = useState<Advertisement[]>([]);
@@ -222,7 +222,13 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-semibold">My Calls</h2>
                     <button
-                        onClick={() => setShowForm(!showForm)}
+                        onClick={() => {
+                            if (!user) {
+                                alert('Please sign in to make a call');
+                                return;
+                            }
+                            setShowForm(!showForm);
+                        }}
                         className="btn btn-primary"
                     >
                         {showForm ? 'Cancel' : '+ New Call'}
@@ -243,16 +249,6 @@ export default function DashboardPage() {
                 <CategoryTabs
                     selected={selectedCategory}
                     onSelect={setSelectedCategory}
-                    counts={{
-                        all: predictions.length,
-                        'not-on-my-bingo': predictions.filter(p => p.category === 'not-on-my-bingo').length,
-                        'sports': predictions.filter(p => p.category === 'sports').length,
-                        'world-events': predictions.filter(p => p.category === 'world-events').length,
-                        'financial-markets': predictions.filter(p => p.category === 'financial-markets').length,
-                        'politics': predictions.filter(p => p.category === 'politics').length,
-                        'entertainment': predictions.filter(p => p.category === 'entertainment').length,
-                        'technology': predictions.filter(p => p.category === 'technology').length,
-                    }}
                 />
 
                 {/* View Toggles & List */}

@@ -40,6 +40,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                         email: '', // Not strictly needed for display
                         name: mappedPrediction.author.name,
                         provider: 'email',
+                        avatarUrl: mappedPrediction.author.avatarUrl
                         // role: authorData.role // Not exposed by mapper yet, but okay for display
                     });
                 } else {
@@ -234,12 +235,17 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
 
                         {/* Top Bar: Brand & Category */}
                         <div className="relative z-10 p-8 flex justify-between items-start">
-                            <div className="text-left">
-                                <Link href="/" className="font-black italic tracking-tighter text-xl no-underline block" style={{ color: '#1e40af' }}>
-                                    CALLED IT!
-                                </Link>
-                                <div className="text-xs font-medium tracking-wide mt-1" style={{ color: '#6b7280' }}>
-                                    Join the Club. Make the Call.
+                            <div className="flex items-center gap-3 text-left">
+                                <div className="bg-white p-1 rounded-lg shadow-sm border border-gray-100">
+                                    <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                                </div>
+                                <div>
+                                    <Link href="/" className="font-black italic tracking-tighter text-xl no-underline block leading-none pt-1" style={{ color: '#1e40af' }}>
+                                        CALLED IT!
+                                    </Link>
+                                    <div className="text-[10px] font-bold tracking-widest mt-0.5 uppercase" style={{ color: '#9ca3af' }}>
+                                        Make the Call
+                                    </div>
                                 </div>
                             </div>
 
@@ -256,16 +262,12 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                         </div>
 
                         {/* Main Content: Prediction */}
-                        <div className="relative z-10 flex-1 flex flex-col justify-center px-8 md:px-16 pb-8">
-                            {/* Giant Quote Mark */}
-                            <div className="text-6xl font-serif leading-none mb-4" style={{ color: '#f3f4f6' }}>“</div>
-
-                            <h1 className="text-3xl md:text-5xl font-bold leading-tight text-balance tracking-tight" style={{ color: '#111827' }}>
+                        <div className="relative z-10 flex-1 flex flex-col justify-center px-8 md:px-12 pb-8">
+                            <h1 className="text-3xl md:text-4xl font-bold leading-tight text-balance tracking-tight" style={{ color: '#111827' }}>
+                                <span className="text-5xl font-serif opacity-20 align-top mr-1" style={{ color: theme.badgeStyle.color }}>“</span>
                                 {prediction.prediction}
+                                <span className="text-5xl font-serif opacity-20 align-bottom ml-1" style={{ color: theme.badgeStyle.color }}>”</span>
                             </h1>
-
-                            {/* Giant Quote Mark End */}
-                            <div className="text-6xl font-serif leading-none mt-4" style={{ color: '#f3f4f6' }}>”</div>
                         </div>
 
                         {/* Status / Outcome */}

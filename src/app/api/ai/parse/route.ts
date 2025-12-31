@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
 
 // Initialize Google Generative AI client
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
@@ -13,14 +13,14 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
  * - targetDate: When the prediction should be evaluated
  * - meta: Additional metadata (tags, entities, subject, action, confidence)
  */
-const schema = {
+const schema: Schema = {
     description: "Prediction analysis result",
     type: SchemaType.OBJECT,
     properties: {
         category: {
             type: SchemaType.STRING,
             enum: ['sports', 'world-events', 'financial-markets', 'politics', 'entertainment', 'technology', 'not-on-my-bingo']
-        },
+        } as any,
         targetDate: {
             type: SchemaType.STRING,
             description: "YYYY-MM-DD format"
@@ -38,9 +38,17 @@ const schema = {
                 },
                 subject: { type: SchemaType.STRING },
                 action: { type: SchemaType.STRING },
-                confidence: { type: SchemaType.NUMBER }
+                confidence: { type: SchemaType.NUMBER },
+                isSafe: {
+                    type: SchemaType.BOOLEAN,
+                    description: "True if the content is safe and appropriate. False if it contains hate speech, harassment, explicit content, or extreme crudeness."
+                },
+                violationReason: {
+                    type: SchemaType.STRING,
+                    description: "If isSafe is false, explain why (e.g., 'Hate speech', 'Explicit content'). Empty if safe."
+                }
             },
-            required: ["tags", "entities", "subject", "action", "confidence"]
+            required: ["tags", "entities", "subject", "action", "confidence", "isSafe", "violationReason"]
         }
     },
     required: ["category", "targetDate", "meta"]
@@ -76,6 +84,7 @@ export async function POST(req: Request) {
         const { data: { user }, error } = await supabase.auth.getUser();
 
         if (error || !user) {
+            // console.log('Bypassing auth for debugging');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -100,7 +109,7 @@ export async function POST(req: Request) {
 
         // Generate AI prompt with the sanitized text
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash-lite",
+            model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash",
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: schema,
@@ -110,17 +119,32 @@ export async function POST(req: Request) {
         const prompt = `
             Analyze this prediction: "${cleanText}"
             Extract structured data relative to today: ${new Date().toISOString().split('T')[0]}
+
+            IMPORTANT SAFETY CHECK:
+            Evaluate the text for hate speech, harassment, explicit sexual content, self-harm promotion, or extreme crudeness.
+            - If it violates safety guidelines, set meta.isSafe to false and provide a reason in meta.violationReason.
+            - If it is safe, set meta.isSafe to true and meta.violationReason to an empty string.
         `;
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
+        const parsedData = JSON.parse(responseText);
 
-        return NextResponse.json(JSON.parse(responseText));
+        // Enforce safety check on the server side
+        if (parsedData.meta && parsedData.meta.isSafe === false) {
+            console.warn(`Safety violation detected: ${parsedData.meta.violationReason}`);
+            return NextResponse.json(
+                { error: `Content flagged as inappropriate: ${parsedData.meta.violationReason}` },
+                { status: 400 }
+            );
+        }
+
+        return NextResponse.json(parsedData);
 
     } catch (error) {
         console.error('AI Parse Error:', error);
         return NextResponse.json(
-            { error: 'Failed to process prediction' },
+            { error: `Failed to process prediction: ${error instanceof Error ? error.message : String(error)}` },
             { status: 500 }
         );
     }

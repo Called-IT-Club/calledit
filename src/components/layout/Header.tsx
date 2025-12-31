@@ -13,9 +13,12 @@ export default function Header() {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
             <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                 {/* Brand / Logo */}
-                <Link href="/" className="hover:opacity-80 transition-opacity">
+                <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-3">
+                    <div className="bg-white p-1 rounded-lg border border-gray-100 shadow-sm">
+                        <img src="/logo.png" alt="Called It Check Logo" className="w-10 h-10 object-contain" />
+                    </div>
                     <div>
-                        <h1 className="text-2xl font-black italic tracking-tighter text-blue-700">
+                        <h1 className="text-2xl font-black italic tracking-tighter text-blue-700 leading-none whitespace-nowrap">
                             CALLED IT!
                         </h1>
                         <p className="text-[10px] font-medium text-gray-500 tracking-wide">

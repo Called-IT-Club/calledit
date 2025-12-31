@@ -151,7 +151,7 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                         </Link>
                     )}
 
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-bold uppercase tracking-wider ${categoryInfo.color}`}>
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-bold uppercase tracking-wider ${categoryInfo.badge}`}>
                         <span>{categoryInfo.emoji}</span>
                         <span>{categoryInfo.label}</span>
                     </div>
@@ -219,8 +219,9 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                         <div className="relative">
                             <button
                                 onClick={() => setShowOutcomeMenu(!showOutcomeMenu)}
-                                className="px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded hover:bg-gray-800 transition-colors shadow-sm"
+                                className="px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all shadow-sm flex items-center gap-1.5"
                             >
+                                <img src="/logo.png" alt="Logo" className="w-4 h-4 object-contain" />
                                 Mark Outcome
                             </button>
 

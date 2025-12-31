@@ -116,29 +116,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signOut = async () => {
         try {
-            await supabase.auth.signOut();
+            // Call server-side signout to clear HTTP-only cookies
+            await fetch('/api/auth/signout', { method: 'POST' });
         } catch (error) {
             console.error('Error signing out:', error);
         } finally {
-            // Visual feedback
-            // window.alert("Signing out... please wait.");
-
-            // 1. Force local state clear
+            // Clear local state
             setUser(null);
             setSession(null);
             setIsAdmin(false);
 
-            // 2. Nuke cookies manually (Robust Version)
-            document.cookie.split(";").forEach((c) => {
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-            });
-
-            // 3. Clear LocalStorage & SessionStorage
+            // Clear Client-side Storage
             if (typeof window !== 'undefined') {
                 window.localStorage.clear();
                 window.sessionStorage.clear();
-
-                // 4. Force Hard Reload
+                // Redirect to home
                 window.location.href = '/';
             }
         }

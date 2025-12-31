@@ -47,7 +47,7 @@ export async function GET() {
 
     } catch (error: unknown) {
         console.error('Admin API Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Admin Create Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }
 
@@ -126,7 +126,7 @@ export async function PUT(req: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Admin Update Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }
 
@@ -163,6 +163,6 @@ export async function DELETE(req: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Admin Delete Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }

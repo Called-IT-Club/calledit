@@ -33,6 +33,7 @@ export interface User {
     provider: 'email' | 'google' | 'apple';
     following?: string[];
     role?: 'user' | 'admin' | 'moderator';
+    avatarUrl?: string;
 }
 
 export interface Profile {

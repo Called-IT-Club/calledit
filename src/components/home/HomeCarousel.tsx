@@ -59,6 +59,9 @@ export default function HomeCarousel() {
             'sports': { emoji: '⚽', label: 'Sports', color: '#3b82f6', bg: '#eff6ff' },
             'world-events': { emoji: '🌍', label: 'World Events', color: '#ef4444', bg: '#fef2f2' },
             'financial-markets': { emoji: '📈', label: 'Financial Markets', color: '#10b981', bg: '#f0fdf4' },
+            'politics': { emoji: '🏛️', label: 'Politics', color: '#64748b', bg: '#f8fafc' },
+            'entertainment': { emoji: '🎬', label: 'Entertainment', color: '#db2777', bg: '#fdf2f8' },
+            'technology': { emoji: '🤖', label: 'Technology', color: '#4f46e5', bg: '#eef2ff' },
         };
         return themes[cat] || themes['not-on-my-bingo'];
     };

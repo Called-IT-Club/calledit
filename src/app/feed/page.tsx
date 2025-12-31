@@ -184,21 +184,11 @@ export default function LiveFeedPage() {
         <div className="min-h-screen bg-gray-50">
             <Header />
 
-            <main className="max-w-4xl mx-auto px-4 py-6">
+            <main className="max-w-6xl mx-auto px-4 py-8">
                 <div className="mb-6">
                     <CategoryTabs
                         selected={selectedCategory}
                         onSelect={setSelectedCategory}
-                        counts={{
-                            all: predictions.length, // Note: This shows loaded count only
-                            'not-on-my-bingo': predictions.filter(p => p.category === 'not-on-my-bingo').length,
-                            'sports': predictions.filter(p => p.category === 'sports').length,
-                            'world-events': predictions.filter(p => p.category === 'world-events').length,
-                            'financial-markets': predictions.filter(p => p.category === 'financial-markets').length,
-                            'politics': predictions.filter(p => p.category === 'politics').length,
-                            'entertainment': predictions.filter(p => p.category === 'entertainment').length,
-                            'technology': predictions.filter(p => p.category === 'technology').length,
-                        }}
                     />
                 </div>
 

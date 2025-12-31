@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Create Prediction Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message || 'Unknown error' }, { status: 500 });
     }
 }
 
@@ -154,7 +154,7 @@ export async function PUT(req: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Update Prediction Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message || 'Unknown error' }, { status: 500 });
     }
 }
 
@@ -189,6 +189,6 @@ export async function DELETE(req: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Delete Prediction Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message || 'Unknown error' }, { status: 500 });
     }
 }

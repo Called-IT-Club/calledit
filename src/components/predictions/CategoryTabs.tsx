@@ -1,23 +1,16 @@
 'use client';
 
 import { PredictionCategory } from '@/types';
+import { useRef, useEffect } from 'react';
 
 interface CategoryTabsProps {
     selected: PredictionCategory | 'all';
     onSelect: (category: PredictionCategory | 'all') => void;
-    counts: {
-        all: number;
-        'not-on-my-bingo': number;
-        'sports': number;
-        'world-events': number;
-        'financial-markets': number;
-        'politics': number;
-        'entertainment': number;
-        'technology': number;
-    };
 }
 
-export default function CategoryTabs({ selected, onSelect, counts }: CategoryTabsProps) {
+export default function CategoryTabs({ selected, onSelect }: CategoryTabsProps) {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
     const tabs = [
         { id: 'all' as const, emoji: '📋', label: 'All' },
         { id: 'not-on-my-bingo' as const, emoji: '🎯', label: 'On My Bingo' },
@@ -29,36 +22,47 @@ export default function CategoryTabs({ selected, onSelect, counts }: CategoryTab
         { id: 'technology' as const, emoji: '🤖', label: 'Tech' },
     ];
 
+    // Scroll active item into view
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            const activeTab = scrollContainerRef.current.querySelector('[data-active="true"]');
+            if (activeTab) {
+                activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+    }, [selected]);
+
     return (
-        <div className="mb-6">
-            <div className="flex flex-wrap gap-2">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => onSelect(tab.id)}
-                        className={`
-              px-4 py-2 rounded-lg font-medium transition-all duration-200
-              flex items-center gap-2 whitespace-nowrap
-              ${selected === tab.id
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                            }
-            `}
-                    >
-                        <span>{tab.emoji}</span>
-                        <span>{tab.label}</span>
-                        <span className={`
-              text-xs px-2 py-0.5 rounded-full
-              ${selected === tab.id
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-200 text-gray-600'
-                            }
-            `}>
-                            {counts[tab.id]}
-                        </span>
-                    </button>
-                ))}
+        <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm -mx-4 px-4 py-3 border-b border-gray-100/50 mb-6 transition-all">
+            <div
+                ref={scrollContainerRef}
+                className="flex overflow-x-auto no-scrollbar gap-2 pb-1 snap-x"
+            >
+                {tabs.map(tab => {
+                    const isActive = selected === tab.id;
+
+                    return (
+                        <button
+                            key={tab.id}
+                            data-active={isActive}
+                            onClick={() => onSelect(tab.id)}
+                            className={`
+                                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 
+                                whitespace-nowrap snap-start border select-none
+                                ${isActive
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-transparent text-white shadow-lg shadow-blue-500/30 scale-105'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:border-blue-200 hover:bg-blue-50/30 hover:text-blue-600 shadow-sm hover:shadow-md'
+                                }
+                            `}
+                        >
+                            <span className={`transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-80 grayscale-[0.5]'}`}>{tab.emoji}</span>
+                            <span>{tab.label}</span>
+                        </button>
+                    );
+                })}
             </div>
+            {/* Gradient Fade for scroll indication */}
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none md:hidden"></div>
         </div>
     );
 }
