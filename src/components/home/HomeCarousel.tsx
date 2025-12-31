@@ -62,6 +62,7 @@ export default function HomeCarousel() {
             'politics': { emoji: '🏛️', label: 'Politics', color: '#64748b', bg: '#f8fafc' },
             'entertainment': { emoji: '🎬', label: 'Entertainment', color: '#db2777', bg: '#fdf2f8' },
             'technology': { emoji: '🤖', label: 'Technology', color: '#4f46e5', bg: '#eef2ff' },
+            'health': { emoji: '🩺', label: 'Health', color: '#14b8a6', bg: '#f0fdfa' },
         };
         return themes[cat] || themes['not-on-my-bingo'];
     };
