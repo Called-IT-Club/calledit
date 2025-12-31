@@ -1,7 +1,6 @@
-import { createServerClient } from '@supabase/ssr';
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { type NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { mapPrediction } from '@/lib/mappers';
 
 /**
@@ -18,29 +17,8 @@ import { mapPrediction } from '@/lib/mappers';
  * @returns {Promise<{client, user}>} Supabase client and authenticated user
  */
 async function getSupabaseClient() {
-    const cookieStore = await cookies();
-
     // 1. Always create the standard client first to verify session/auth
-    const standardClient = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return cookieStore.getAll();
-                },
-                setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        )
-                    } catch {
-                        // Ignored
-                    }
-                },
-            },
-        }
-    );
+    const standardClient = await createSupabaseServerClient();
 
     // 2. Get the authenticated user
     const { data: { user }, error } = await standardClient.auth.getUser();
@@ -51,16 +29,7 @@ async function getSupabaseClient() {
 
     // 3. If Service Key exists, create a privileged client to BYPASS RLS
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        const serviceClient = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY,
-            {
-                auth: {
-                    autoRefreshToken: false,
-                    persistSession: false
-                }
-            }
-        );
+        const serviceClient = createSupabaseAdminClient();
         return { client: serviceClient, user };
     }
 

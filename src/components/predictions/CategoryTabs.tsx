@@ -20,6 +20,7 @@ export default function CategoryTabs({ selected, onSelect }: CategoryTabsProps) 
         { id: 'politics' as const, emoji: '🏛️', label: 'Politics' },
         { id: 'entertainment' as const, emoji: '🎬', label: 'Entertainment' },
         { id: 'technology' as const, emoji: '🤖', label: 'Tech' },
+        { id: 'health' as const, emoji: '🏥', label: 'Health' },
     ];
 
     // Scroll active item into view

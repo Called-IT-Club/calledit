@@ -3,6 +3,7 @@
 import { Prediction, Affiliate } from '@/types';
 import { useState } from 'react';
 import Link from 'next/link';
+import { getCategoryRaw } from '@/config/categories';
 
 interface PredictionCardProps {
     prediction: Prediction;
@@ -18,51 +19,16 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
     const getCategoryInfo = () => {
-        const info = {
-            'not-on-my-bingo': {
-                emoji: '🎯', label: 'Bingo',
-                cardBg: 'bg-fuchsia-50/80',
-                badge: 'bg-white/60 text-fuchsia-700 border-fuchsia-200 hover:bg-white',
-                btn: 'text-fuchsia-600'
-            },
-            'sports': {
-                emoji: '⚽', label: 'Sports',
-                cardBg: 'bg-sky-50/80',
-                badge: 'bg-white/60 text-sky-700 border-sky-200 hover:bg-white',
-                btn: 'text-sky-600'
-            },
-            'world-events': {
-                emoji: '🌍', label: 'World',
-                cardBg: 'bg-orange-50/80',
-                badge: 'bg-white/60 text-orange-700 border-orange-200 hover:bg-white',
-                btn: 'text-orange-600'
-            },
-            'financial-markets': {
-                emoji: '📈', label: 'Finance',
-                cardBg: 'bg-emerald-50/80',
-                badge: 'bg-white/60 text-emerald-700 border-emerald-200 hover:bg-white',
-                btn: 'text-emerald-600'
-            },
-            'politics': {
-                emoji: '🏛️', label: 'Politics',
-                cardBg: 'bg-slate-50/80',
-                badge: 'bg-white/60 text-slate-700 border-slate-200 hover:bg-white',
-                btn: 'text-slate-600'
-            },
-            'entertainment': {
-                emoji: '🎬', label: 'Entmt',
-                cardBg: 'bg-rose-50/80',
-                badge: 'bg-white/60 text-rose-700 border-rose-200 hover:bg-white',
-                btn: 'text-rose-600'
-            },
-            'technology': {
-                emoji: '🤖', label: 'Tech',
-                cardBg: 'bg-indigo-50/80',
-                badge: 'bg-white/60 text-indigo-700 border-indigo-200 hover:bg-white',
-                btn: 'text-indigo-600'
-            },
+        const raw = getCategoryRaw(prediction.category);
+        return {
+            emoji: raw.emoji,
+            label: raw.label,
+            // Map the centralized config colors to the Tailwind classes expected by this component
+            cardBg: `${raw.colors.bg}/80`, // e.g., bg-sky-50/80
+            badge: `bg-white/60 ${raw.colors.text.replace('text-', 'text-')} ${raw.colors.border} hover:bg-white`,
+            // Note: raw.colors.text is like 'text-sky-600', we keep it
+            btn: raw.colors.text
         };
-        return info[prediction.category] || info.technology;
     };
 
     const getOutcomeInfo = () => {

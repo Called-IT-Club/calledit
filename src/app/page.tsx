@@ -1,13 +1,7 @@
 import Link from 'next/link';
 import HomeCarousel from '@/components/home/HomeCarousel';
 import HomeAuthButtons from '@/components/home/HomeAuthButtons';
-
-const CATEGORIES = [
-  { id: 'bingo', label: 'On My Bingo', emoji: '🎯', color: '#8b5cf6', bg: '#f5f3ff' },
-  { id: 'sports', label: 'Sports', emoji: '⚽', color: '#3b82f6', bg: '#eff6ff' },
-  { id: 'world', label: 'World Events', emoji: '🌍', color: '#ef4444', bg: '#fef2f2' },
-  { id: 'finance', label: 'Financial Markets', emoji: '📈', color: '#10b981', bg: '#f0fdf4' },
-];
+import { CATEGORY_IDS, getCategoryRaw } from '@/config/categories';
 
 export default function HomePage() {
   return (
@@ -76,19 +70,22 @@ export default function HomePage() {
         <p className="text-center text-gray-400 text-sm font-medium mb-6 uppercase tracking-widest">
           Predict Anything
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {CATEGORIES.map((cat) => (
-            <div
-              key={cat.id}
-              className="p-4 rounded-xl flex items-center gap-3 justify-center transition-transform hover:scale-105 cursor-default border border-transparent hover:border-gray-100 hover:shadow-sm"
-              style={{ backgroundColor: cat.bg }}
-            >
-              <span className="text-2xl filter drop-shadow-sm">{cat.emoji}</span>
-              <span className="font-semibold text-sm" style={{ color: cat.color }}>
-                {cat.label}
-              </span>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl mx-auto">
+          {CATEGORY_IDS.map((catId: any) => {
+            const cat = getCategoryRaw(catId);
+            return (
+              <div
+                key={cat.id}
+                className="p-4 rounded-xl flex items-center gap-3 justify-center transition-transform hover:scale-105 cursor-default border border-transparent hover:border-gray-100 hover:shadow-sm"
+                style={{ backgroundColor: cat.colors.bgHex }}
+              >
+                <span className="text-2xl filter drop-shadow-sm">{cat.emoji}</span>
+                <span className="font-semibold text-sm" style={{ color: cat.colors.hex }}>
+                  {cat.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

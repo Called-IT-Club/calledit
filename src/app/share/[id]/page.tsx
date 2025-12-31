@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Prediction, User } from '@/types';
 import Link from 'next/link';
 import { useRef } from 'react';
+import { getCategoryRaw } from '@/config/categories';
 
 export default function SharePage({ params }: { params: Promise<{ id: string }> }) {
     // Unwrap params using React.use()
@@ -77,52 +78,18 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     );
 
     const getCategoryTheme = () => {
-        const info = {
-            'not-on-my-bingo': {
-                emoji: '🎯', label: 'Bingo',
-                // Updated colors to match Home Page (globals.css)
-                cardStyle: { backgroundColor: '#f5f3ff' }, // violet-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#7c3aed', borderColor: '#8b5cf6' }, // violet-600/500
-                gradient: 'from-violet-400 to-purple-600'
+        const raw = getCategoryRaw(prediction.category);
+        return {
+            emoji: raw.emoji,
+            label: raw.label,
+            cardStyle: { backgroundColor: raw.share.cardBg },
+            badgeStyle: {
+                backgroundColor: raw.share.badge.bg,
+                color: raw.share.badge.text,
+                borderColor: raw.share.badge.border
             },
-            'sports': {
-                emoji: '⚽', label: 'Sports',
-                cardStyle: { backgroundColor: '#eff6ff' }, // blue-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#2563eb', borderColor: '#3b82f6' }, // blue-600/500
-                gradient: 'from-blue-400 to-indigo-600'
-            },
-            'world-events': {
-                emoji: '🌍', label: 'World',
-                cardStyle: { backgroundColor: '#fef2f2' }, // red-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#dc2626', borderColor: '#ef4444' }, // red-600/500
-                gradient: 'from-red-400 to-orange-600'
-            },
-            'financial-markets': {
-                emoji: '📈', label: 'Finance',
-                cardStyle: { backgroundColor: '#f0fdf4' }, // green-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#059669', borderColor: '#10b981' }, // emerald-600/500
-                gradient: 'from-emerald-400 to-green-600'
-            },
-            'politics': {
-                emoji: '🏛️', label: 'Politics',
-                cardStyle: { backgroundColor: '#f8fafc' }, // slate-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#334155', borderColor: '#cbd5e1' }, // slate-700
-                gradient: 'from-slate-400 to-gray-600'
-            },
-            'entertainment': {
-                emoji: '🎬', label: 'Entmt',
-                cardStyle: { backgroundColor: '#fff1f2' }, // rose-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#be123c', borderColor: '#fda4af' }, // rose-700
-                gradient: 'from-rose-400 to-pink-600'
-            },
-            'technology': {
-                emoji: '🤖', label: 'Tech',
-                cardStyle: { backgroundColor: '#eef2ff' }, // indigo-50
-                badgeStyle: { backgroundColor: 'rgba(255, 255, 255, 0.6)', color: '#4338ca', borderColor: '#a5b4fc' }, // indigo-700
-                gradient: 'from-indigo-400 to-violet-600'
-            },
+            gradient: raw.share.gradient
         };
-        return info[prediction.category] || info.technology;
     };
 
     const theme = getCategoryTheme();

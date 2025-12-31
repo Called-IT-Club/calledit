@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PredictionCategory } from '@/types';
+import { CATEGORY_IDS, getCategoryRaw } from '@/config/categories';
 
 interface PredictionFormProps {
     onSubmit: (prediction: {
@@ -84,19 +85,6 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
     // Debounced Auto-analysis
     // Removed Debounced Auto-analysis to save API calls
     // Trigger is now validation-based on Submit
-
-    const getCategoryInfo = (cat: PredictionCategory) => {
-        const map: Record<PredictionCategory, { label: string; emoji: string }> = {
-            'sports': { label: 'Sports', emoji: '⚽' },
-            'financial-markets': { label: 'Finance', emoji: '📈' },
-            'politics': { label: 'Politics', emoji: '⚖️' },
-            'world-events': { label: 'World', emoji: '🌍' },
-            'entertainment': { label: 'Entertainment', emoji: '🎬' },
-            'technology': { label: 'Tech', emoji: '💻' },
-            'not-on-my-bingo': { label: 'Bingo', emoji: '🎲' }
-        };
-        return map[cat] || { label: 'Other', emoji: '❓' };
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -269,10 +257,10 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                             AI detected category:
                         </label>
                         <div className={`category-${aiCategory.split('-')[0]} px-4 py-3 rounded-lg flex items-center gap-3`}
-                            style={{ backgroundColor: 'var(--cat-bg)' }}>
-                            <span className="text-2xl">{getCategoryInfo(aiCategory).emoji}</span>
-                            <span className="font-medium" style={{ color: 'var(--cat-color)' }}>
-                                {getCategoryInfo(aiCategory).label}
+                            style={{ backgroundColor: getCategoryRaw(aiCategory).colors.bgHex }}>
+                            <span className="text-2xl">{getCategoryRaw(aiCategory).emoji}</span>
+                            <span className="font-medium" style={{ color: getCategoryRaw(aiCategory).colors.hex }}>
+                                {getCategoryRaw(aiCategory).label}
                             </span>
                             <button
                                 type="button"
@@ -311,19 +299,19 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {(['not-on-my-bingo', 'sports', 'world-events', 'financial-markets', 'politics', 'entertainment', 'technology'] as PredictionCategory[]).map(cat => {
-                                        const info = getCategoryInfo(cat);
+                                    {CATEGORY_IDS.map(cat => {
+                                        const info = getCategoryRaw(cat);
                                         return (
                                             <button
                                                 key={cat}
                                                 type="button"
                                                 onClick={() => setAiCategory(cat)}
                                                 className={`category-${cat.split('-')[0]} p-3 rounded-lg text-left hover:shadow-md transition-shadow`}
-                                                style={{ backgroundColor: 'var(--cat-bg)' }}
+                                                style={{ backgroundColor: info.colors.bgHex }}
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <span>{info.emoji}</span>
-                                                    <span className="text-sm font-medium" style={{ color: 'var(--cat-color)' }}>
+                                                    <span className="text-sm font-medium" style={{ color: info.colors.hex }}>
                                                         {info.label}
                                                     </span>
                                                 </div>

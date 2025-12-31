@@ -1,7 +1,5 @@
-import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase-server';
 import { type NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { mapPrediction } from '@/lib/mappers';
 
 export async function GET(
@@ -10,7 +8,6 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-        const cookieStore = await cookies();
 
         // Standard Client (for session check if needed, but this is a public endpoint usually)
         // We really just want the data.
@@ -19,30 +16,10 @@ export async function GET(
 
         // Use Service Key for fast, reliable fetching (Public Read)
         if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-            supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.SUPABASE_SERVICE_ROLE_KEY,
-                {
-                    auth: {
-                        autoRefreshToken: false,
-                        persistSession: false
-                    }
-                }
-            );
+            supabase = createSupabaseAdminClient();
         } else {
             // Fallback
-            supabase = createServerClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                {
-                    cookies: {
-                        getAll() { return cookieStore.getAll(); },
-                        setAll(cookiesToSet) {
-                            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-                        },
-                    },
-                }
-            );
+            supabase = await createSupabaseServerClient();
         }
 
         const { data, error } = await supabase

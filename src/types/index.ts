@@ -1,4 +1,4 @@
-export type PredictionCategory = 'not-on-my-bingo' | 'sports' | 'world-events' | 'financial-markets' | 'politics' | 'entertainment' | 'technology';
+export type PredictionCategory = 'not-on-my-bingo' | 'sports' | 'world-events' | 'financial-markets' | 'politics' | 'entertainment' | 'technology' | 'health';
 
 export type PredictionOutcome = 'pending' | 'true' | 'false';
 
