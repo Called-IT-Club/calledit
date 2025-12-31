@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Prediction, PredictionCategory } from '@/types';
+import { Prediction, PredictionCategory, Affiliate, Advertisement } from '@/types';
 import CategoryTabs from '@/components/predictions/CategoryTabs';
 import PredictionCard from '@/components/predictions/PredictionCard';
+import SponsoredCard from '@/components/ads/SponsoredCard';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 
@@ -14,6 +15,8 @@ const PAGE_SIZE = 20;
 
 export default function LiveFeedPage() {
     const [predictions, setPredictions] = useState<Prediction[]>([]);
+    const [affiliates, setAffiliates] = useState<Record<string, Affiliate>>({});
+    const [ads, setAds] = useState<Advertisement[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<PredictionCategory | 'all'>('all');
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -65,7 +68,37 @@ export default function LiveFeedPage() {
             }
         };
 
+        const fetchAffiliates = async () => {
+            try {
+                const res = await fetch('/api/affiliates');
+                if (res.ok) {
+                    const { affiliates: data } = await res.json();
+                    const map: Record<string, Affiliate> = {};
+                    (data || []).forEach((a: Affiliate) => {
+                        if (a.category) map[a.category] = a;
+                    });
+                    setAffiliates(map);
+                }
+            } catch (e) {
+                console.error('Failed to fetch affiliates', e);
+            }
+        };
+
+        const fetchAds = async () => {
+            try {
+                const res = await fetch('/api/ads');
+                if (res.ok) {
+                    const { ads: adsData } = await res.json();
+                    setAds(adsData || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch ads", err);
+            }
+        };
+
         fetchInitialData();
+        fetchAffiliates();
+        fetchAds();
     }, []);
 
     // Load More Function (Cursor Pagination)
@@ -132,9 +165,20 @@ export default function LiveFeedPage() {
         };
     }, []);
 
+    // Mix Ads into Stream
     const filteredPredictions = selectedCategory === 'all'
         ? predictions
         : predictions.filter(p => p.category === selectedCategory);
+
+    const mixedItems = filteredPredictions.reduce<(Prediction | { type: 'ad', data: Advertisement })[]>((acc, curr, index) => {
+        acc.push(curr);
+        // Inject Ad after first item (index 0 - making it 2nd) and then every 5 items
+        if (ads.length > 0 && index % 5 === 0) {
+            const adIndex = (index / 5) % ads.length;
+            acc.push({ type: 'ad', data: ads[adIndex] });
+        }
+        return acc;
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -162,9 +206,20 @@ export default function LiveFeedPage() {
                     <div className="text-center py-12 text-gray-500">Connecting to feed...</div>
                 ) : (
                     <div className="space-y-4">
-                        {filteredPredictions.map((prediction, index) => {
-                            // Attach ref to the last element of the list to trigger loadMore
-                            const isLast = index === filteredPredictions.length - 1;
+                        {mixedItems.map((item, index) => {
+                            // Only attach ref if it's the last REAL prediction item
+                            const isLast = index === mixedItems.length - 1;
+
+                            if ('type' in item && item.type === 'ad') {
+                                return (
+                                    <div key={`ad-${index}`} className="animate-fade-in-down">
+                                        <SponsoredCard ad={item.data} />
+                                    </div>
+                                );
+                            }
+
+                            const prediction = item as Prediction;
+
                             return (
                                 <div
                                     key={prediction.id}
@@ -175,6 +230,7 @@ export default function LiveFeedPage() {
                                         prediction={prediction}
                                         onUpdateOutcome={() => { }} // Read-only in feed for now
                                         isReadOnly={true}
+                                        activeAffiliate={affiliates[prediction.category]}
                                     />
                                 </div>
                             );

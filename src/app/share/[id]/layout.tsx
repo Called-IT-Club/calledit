@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     // Fallback to localhost if env var not set (for dev), implies production url should be set in real app
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const imageUrl = `${baseUrl}/share/${id}/image`;
+    const imageUrl = `${baseUrl}/api/og?id=${id}`;
 
     return {
         openGraph: {

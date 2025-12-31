@@ -10,12 +10,26 @@ const size = {
     height: 750,
 };
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+        return new ImageResponse(
+            (
+                <div style={{
+                    width: '100%', height: '100%', background: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#111827'
+                }}>
+                    <div style={{ fontSize: 24 }}>ID Required</div>
+                </div>
+            ),
+            { ...size }
+        );
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { id } = await params;
 
     const { data: prediction } = await supabase
         .from('predictions')
@@ -134,7 +148,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                             left: '50%',
                             transform: 'translate(-50%, -50%)',
                             background: '#fee2e2',
-                            color: '#dc2626',
+                            color: 'white',
                             fontSize: 24,
                             fontWeight: 900,
                             padding: '12px 30px',

@@ -1,32 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'react-qr-code';
 import { User } from '@/types';
 import Link from 'next/link';
 
 export default function ProfilePage() {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { user: authUser, isLoading, isAdmin } = useAuth();
 
-    useEffect(() => {
-        // Fetch current user (mocked as user-1)
-        const fetchUser = async () => {
-            try {
-                const res = await fetch('http://localhost:3001/api/users/user-1');
-                const data = await res.json();
-                setUser(data);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUser();
-    }, []);
+    if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (!authUser) return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+            <div>Please sign in to view your profile</div>
+            <Link href="/" className="text-blue-600 hover:underline">Go Home</Link>
+        </div>
+    );
 
-    if (loading) return <div>Loading...</div>;
-    if (!user) return <div>User not found</div>;
+    const user: User = {
+        id: authUser.id,
+        email: authUser.email!,
+        name: authUser.user_metadata?.full_name || 'User',
+        provider: authUser.app_metadata?.provider as any || 'email',
+        role: isAdmin ? 'admin' : 'user',
+        following: [] // TODO: Implement real following
+    };
 
     const addFriendUrl = `${window.location.origin}/add-friend/${user.id}`;
 
@@ -39,20 +36,40 @@ export default function ProfilePage() {
             </nav>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm text-center w-full max-w-sm">
-                <div className="w-20 h-20 bg-gradient-to-tr from-blue-400 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-                    {user.name?.[0] || 'U'}
+                <div className="w-20 h-20 bg-gradient-to-tr from-blue-400 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold overflow-hidden relative">
+                    {authUser.user_metadata?.avatar_url ? (
+                        <img src={authUser.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                        user.name?.[0] || 'U'
+                    )}
                 </div>
+
+                {user.role === 'admin' && (
+                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-widest mb-2 border border-purple-200">
+                        Admin
+                    </span>
+                )}
 
                 <h2 className="text-2xl font-bold mb-1">{user.name}</h2>
                 <p className="text-gray-500 text-sm mb-8">{user.email}</p>
 
-                <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-200 inline-block mb-6">
+                <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-200 inline-block mb-4">
                     <QRCode value={addFriendUrl} size={200} />
                 </div>
 
-                <p className="text-sm text-gray-600 font-medium">
+                <p className="text-sm text-gray-600 font-medium mb-3">
                     Scan to follow me
                 </p>
+
+                <button
+                    onClick={() => {
+                        navigator.clipboard.writeText(addFriendUrl);
+                        alert('Profile link copied to clipboard!');
+                    }}
+                    className="btn btn-secondary text-sm px-4 py-2 w-full max-w-xs"
+                >
+                    📋 Copy Profile Link
+                </button>
 
                 <div className="mt-8 flex justify-center gap-8 text-center border-t border-gray-100 pt-6">
                     <div>

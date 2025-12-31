@@ -56,3 +56,13 @@ export interface Advertisement {
     views?: number; // Virtual field for UI
     clicks?: number; // Virtual field for UI
 }
+
+export interface Affiliate {
+    id: string;
+    label: string;
+    url: string;
+    description?: string;
+    color?: string;
+    category?: PredictionCategory;
+    is_active: boolean;
+}

@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import Header from '@/components/layout/Header';
-import { Advertisement, PredictionCategory } from '@/types';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Header from '@/components/layout/Header';
+import { Advertisement } from '@/types';
 
 export default function AdminPage() {
-    const { user, isAdmin, isLoading } = useAuth();
+    const { isAdmin, isLoading } = useAuth();
     const router = useRouter();
     const [ads, setAds] = useState<Advertisement[]>([]);
     const [loadingAds, setLoadingAds] = useState(true);
@@ -30,36 +30,11 @@ export default function AdminPage() {
 
     const fetchAds = async () => {
         try {
-            // Fetch Ads
-            const { data: adsData, error } = await supabase
-                .from('advertisements')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const res = await fetch('/api/admin/ads');
+            if (!res.ok) throw new Error('Failed to fetch ads');
 
-            if (adsData) setAds(adsData as Advertisement[]); // Type assertion needed until Supabase types gen generated
-
-            if (error) throw error;
-
-            // Enrich with Stats (This handles the "count" join loosely)
-            // Ideally use rpc or dedicated view, but iterating is fine for v1
-            const enriched = await Promise.all((adsData || []).map(async (ad) => {
-                const { count: views } = await supabase
-                    .from('ad_events')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('ad_id', ad.id)
-                    .eq('type', 'view');
-
-                const { count: clicks } = await supabase
-                    .from('ad_events')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('ad_id', ad.id)
-                    .eq('type', 'click');
-
-                return { ...ad, views: views || 0, clicks: clicks || 0 };
-            }));
-
-            setAds(enriched as Advertisement[]);
-
+            const { ads: adsData } = await res.json();
+            setAds(adsData || []);
         } catch (err) {
             console.error('Error fetching ads:', err);
         } finally {
@@ -73,33 +48,83 @@ export default function AdminPage() {
         }
     }, [isAdmin]);
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { error } = await supabase
-                .from('advertisements')
-                .insert([{ ...newAd, created_by: user?.id }]);
+            const url = '/api/admin/ads';
+            const method = editingId ? 'PUT' : 'POST';
+            const body = editingId ? { ...newAd, id: editingId } : newAd;
 
-            if (error) throw error;
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || `Failed to ${editingId ? 'update' : 'create'} ad`);
+            }
 
             setIsCreating(false);
-            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true });
+            setEditingId(null);
+            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true, description: '', image_url: '', category: null });
             fetchAds();
-        } catch (err) {
-            alert('Error creating ad');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            alert(`Error saving ad: ${errorMessage}`);
             console.error(err);
         }
     };
 
+    const handleEdit = (ad: Advertisement) => {
+        setNewAd({
+            title: ad.title,
+            link_url: ad.link_url,
+            cta_text: ad.cta_text,
+            is_active: ad.is_active,
+            description: ad.description,
+            image_url: ad.image_url,
+            category: ad.category
+        });
+        setEditingId(ad.id);
+        setIsCreating(true);
+    };
+
     const handleDelete = async (id: string) => {
         if (!confirm('Delete this ad?')) return;
-        await supabase.from('advertisements').delete().eq('id', id);
-        fetchAds();
+
+        try {
+            const res = await fetch(`/api/admin/ads?id=${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!res.ok) throw new Error('Failed to delete ad');
+
+            fetchAds();
+        } catch (err) {
+            console.error('Error deleting ad:', err);
+            alert('Failed to delete ad');
+        }
     };
 
     const toggleActive = async (id: string, current: boolean) => {
-        await supabase.from('advertisements').update({ is_active: !current }).eq('id', id);
-        fetchAds();
+        try {
+            const res = await fetch('/api/admin/ads', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, is_active: !current })
+            });
+
+            if (!res.ok) throw new Error('Failed to update ad');
+
+            fetchAds();
+        } catch (err) {
+            console.error('Error updating ad:', err);
+            alert('Failed to update status');
+        }
     };
 
     if (isLoading || !isAdmin) return <div className="p-8 text-center">Loading Admin...</div>;
@@ -109,16 +134,27 @@ export default function AdminPage() {
             <Header />
             <main className="max-w-5xl mx-auto px-4 py-8">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                    <button onClick={() => setIsCreating(!isCreating)} className="btn btn-primary">
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-3xl font-bold">Ads Admin</h1>
+                        <Link href="/admin/affiliates" className="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full transition-colors">
+                            Manage Affiliates &rarr;
+                        </Link>
+                    </div>
+                    <button onClick={() => {
+                        setIsCreating(!isCreating);
+                        if (!isCreating) {
+                            setEditingId(null);
+                            setNewAd({ title: '', link_url: '', cta_text: 'Learn More', is_active: true });
+                        }
+                    }} className="btn btn-primary">
                         {isCreating ? 'Cancel' : '+ Create Ad'}
                     </button>
                 </div>
 
                 {isCreating && (
                     <div className="bg-white p-6 rounded-lg shadow-md mb-8 fade-in">
-                        <h3 className="text-xl font-semibold mb-4">New Advertisement</h3>
-                        <form onSubmit={handleCreate} className="space-y-4">
+                        <h3 className="text-xl font-semibold mb-4">{editingId ? 'Edit Advertisement' : 'New Advertisement'}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Title</label>
                                 <input className="w-full border p-2 rounded" value={newAd.title} onChange={e => setNewAd({ ...newAd, title: e.target.value })} required />
@@ -144,7 +180,7 @@ export default function AdminPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Category Target</label>
-                                    <select className="w-full border p-2 rounded" value={newAd.category || ''} onChange={e => setNewAd({ ...newAd, category: e.target.value as any || null })}>
+                                    <select className="w-full border p-2 rounded" value={newAd.category || ''} onChange={e => setNewAd({ ...newAd, category: (e.target.value as Advertisement['category']) || null })}>
                                         <option value="">Global (All Categories)</option>
                                         <option value="sports">Sports</option>
                                         <option value="politics">Politics</option>
@@ -153,7 +189,7 @@ export default function AdminPage() {
                                     </select>
                                 </div>
                             </div>
-                            <button type="submit" className="btn btn-primary w-full">Launch Ad</button>
+                            <button type="submit" className="btn btn-primary w-full">{editingId ? 'Update Ad' : 'Launch Ad'}</button>
                         </form>
                     </div>
                 )}
@@ -177,6 +213,9 @@ export default function AdminPage() {
                             <div className="flex items-center gap-3">
                                 <button onClick={() => toggleActive(ad.id, ad.is_active)} className={`px-3 py-1 rounded text-sm font-medium ${ad.is_active ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
                                     {ad.is_active ? 'Pause' : 'Activate'}
+                                </button>
+                                <button onClick={() => handleEdit(ad)} className="text-blue-500 hover:text-blue-700 p-2">
+                                    ✏️
                                 </button>
                                 <button onClick={() => handleDelete(ad.id)} className="text-red-500 hover:text-red-700 p-2">
                                     🗑

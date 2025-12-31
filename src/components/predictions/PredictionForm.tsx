@@ -33,6 +33,11 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                 body: JSON.stringify({ text: prediction }),
             });
 
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || response.statusText);
+            }
+
             const result = await response.json();
             if (result.category) {
                 setAiCategory(result.category);
@@ -230,6 +235,34 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                     />
                 </div>
 
+                {/* Privacy Toggle */}
+                <div
+                    onClick={() => setIsPrivate(!isPrivate)}
+                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${isPrivate
+                        ? 'bg-purple-50 border-purple-200 shadow-sm'
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${isPrivate ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
+                            {isPrivate ? '🔒' : '🌐'}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className={`text-sm font-bold ${isPrivate ? 'text-purple-900' : 'text-gray-700'}`}>
+                                {isPrivate ? 'Keep Private' : 'Public Call'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                                {isPrivate ? 'Only visible to you' : 'Visible to everyone'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* IOS Style Switch */}
+                    <div className={`w-11 h-6 rounded-full p-1 transition-colors duration-300 ease-in-out flex items-center ${isPrivate ? 'bg-purple-600' : 'bg-gray-300'}`}>
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${isPrivate ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                </div>
+
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">
                     <button
@@ -247,7 +280,7 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                         Cancel
                     </button>
                 </div>
-            </form>
-        </div>
+            </form >
+        </div >
     );
 }

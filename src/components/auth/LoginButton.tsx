@@ -34,12 +34,15 @@ export default function LoginButton() {
                                 {isAdmin ? 'Role: Admin' : 'Role: User'}
                             </p>
                         </div>
-                        <a
-                            href="/signout"
-                            className="w-full block text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                        <button
+                            onClick={() => {
+                                setIsOpen(false);
+                                signOut();
+                            }}
+                            className="w-full block text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 bg-white"
                         >
                             Sign Out
-                        </a>
+                        </button>
                     </div>
                 )}
             </div>

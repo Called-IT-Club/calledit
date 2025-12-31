@@ -15,11 +15,6 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     const [author, setAuthor] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [isMe, setIsMe] = useState(false);
-
-    // Mock current user
-    const currentUserId = 'user-1';
 
     useEffect(() => {
         const fetchData = async () => {
@@ -51,20 +46,6 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                     setAuthor({ id: mappedPrediction.userId, email: '', name: 'Authenticated', provider: 'email' });
                 }
 
-                // 3. Check Protocol
-                // To do this strictly "IsMe", we need to know who "I" am.
-                // We can get that from client side auth context or just ignore for share page.
-                // The original code mocked currentUserId = 'user-1' anyway or checked auth.
-                // We'll leave the auth check to a separate useEffect if needed, but for public share it's visual.
-                // Let's quickly check auth status purely for the "Edit" button if it existed
-                // BUT, the share page is mostly read-only.
-
-                // If we have a user in session, we can check.
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user && user.id === mappedPrediction.userId) {
-                    setIsMe(true);
-                }
-
             } catch (err: any) {
                 console.error(err);
                 setError(err.message || 'Could not find this prediction'); // Show actual error
@@ -76,10 +57,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
         fetchData();
     }, [id]);
 
-    const handleFollow = async () => {
-        // Mock follow for Guest Users
-        setIsFollowing(true);
-    };
+
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -411,7 +389,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                     <button title="Pin It"
                         onClick={() => {
                             const url = encodeURIComponent(`${window.location.href}?`);
-                            const media = encodeURIComponent(`${window.location.origin}/share/${id}/image`);
+                            const media = encodeURIComponent(`${window.location.origin}/api/og?id=${id}`);
                             const description = encodeURIComponent(`Check out my prediction on Called It: ${prediction?.prediction}`);
                             window.open(`https://pinterest.com/pin/create/button/?url=${url}&media=${media}&description=${description}`, '_blank');
                         }}

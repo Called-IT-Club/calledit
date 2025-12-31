@@ -4,7 +4,19 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { mapPrediction } from '@/lib/mappers';
 
-// Helper to get the best available Supabase client
+/**
+ * Gets the appropriate Supabase client for predictions operations.
+ * 
+ * Strategy:
+ * 1. First authenticates the user with standard client
+ * 2. If service role key is available, returns privileged client that bypasses RLS
+ * 3. Otherwise returns standard client (bound by RLS policies)
+ * 
+ * Note: When using service role client, ownership checks MUST be enforced manually
+ * since RLS is bypassed.
+ * 
+ * @returns {Promise<{client, user}>} Supabase client and authenticated user
+ */
 async function getSupabaseClient() {
     const cookieStore = await cookies();
 
@@ -56,7 +68,14 @@ async function getSupabaseClient() {
     return { client: standardClient, user };
 }
 
-// CREATE
+/**
+ * POST /api/predictions
+ * Creates a new prediction for the authenticated user.
+ * Requires authentication.
+ * 
+ * @param {NextRequest} req - Request with prediction data in body
+ * @returns {Promise<NextResponse>} JSON response with created prediction
+ */
 export async function POST(req: NextRequest) {
     try {
         const { client: supabase, user } = await getSupabaseClient();
@@ -86,13 +105,23 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ prediction: mapPrediction(data) });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Create Prediction Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-// UPDATE
+/**
+ * PUT /api/predictions
+ * Updates an existing prediction (outcome, evidence, or soft delete).
+ * Requires authentication and ownership of the prediction.
+ * 
+ * Security: Enforces user_id check even when using service role client
+ * to prevent unauthorized updates.
+ * 
+ * @param {NextRequest} req - Request with prediction ID and updates in body
+ * @returns {Promise<NextResponse>} JSON response with success status
+ */
 export async function PUT(req: NextRequest) {
     try {
         const { client: supabase, user } = await getSupabaseClient();
@@ -103,8 +132,8 @@ export async function PUT(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-        // Build Payload
-        const updates: any = {};
+        // Build update payload
+        const updates: Record<string, unknown> = {};
         if (outcome) updates.outcome = outcome;
         if (evidenceImageUrl !== undefined) updates.evidence_image_url = evidenceImageUrl;
 
@@ -123,13 +152,20 @@ export async function PUT(req: NextRequest) {
 
         return NextResponse.json({ success: true });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Update Prediction Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-// DELETE (Hard Delete - if needed, but we mostly use soft delete via PUT)
+/**
+ * DELETE /api/predictions
+ * Soft deletes a prediction by setting deleted_at timestamp.
+ * Requires authentication and ownership of the prediction.
+ * 
+ * @param {NextRequest} req - Request with prediction ID in query params
+ * @returns {Promise<NextResponse>} JSON response with success status
+ */
 export async function DELETE(req: NextRequest) {
     try {
         const { client: supabase, user } = await getSupabaseClient();
@@ -151,7 +187,7 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json({ success: true });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Delete Prediction Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

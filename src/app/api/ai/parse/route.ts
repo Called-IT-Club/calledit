@@ -1,9 +1,18 @@
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
+// Initialize Google Generative AI client
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
+/**
+ * Schema definition for AI-powered prediction analysis.
+ * Defines the expected structure of the AI response including:
+ * - category: Prediction category classification
+ * - targetDate: When the prediction should be evaluated
+ * - meta: Additional metadata (tags, entities, subject, action, confidence)
+ */
 const schema = {
     description: "Prediction analysis result",
     type: SchemaType.OBJECT,
@@ -37,10 +46,36 @@ const schema = {
     required: ["category", "targetDate", "meta"]
 };
 
+/**
+ * POST /api/ai/parse
+ * Uses Google Gemini AI to parse prediction text and extract structured data.
+ * Requires authentication.
+ * 
+ * Security measures:
+ * - Limits input to 280 characters
+ * - Removes control characters
+ * - Requires authenticated user
+ * 
+ * @param {Request} req - Request object with { text: string } in body
+ * @returns {Promise<NextResponse>} Parsed prediction data with category, targetDate, and metadata
+ */
 export async function POST(req: Request) {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const cookieStore = await cookies();
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    getAll() { return cookieStore.getAll(); },
+                    setAll() { /* Cookie setting handled by Next.js */ }
+                }
+            }
+        );
+
+        const { data: { user }, error } = await supabase.auth.getUser();
+
+        if (error || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -63,10 +98,9 @@ export async function POST(req: Request) {
             });
         }
 
-        // Prompt for the AI
-
+        // Generate AI prompt with the sanitized text
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash-lite",
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: schema,

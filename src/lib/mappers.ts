@@ -1,5 +1,13 @@
 import { Prediction } from '@/types';
 
+/**
+ * Maps a database prediction row to the application Prediction type.
+ * Transforms snake_case database fields to camelCase and enriches with author data.
+ * 
+ * @param row - Raw prediction row from database with joined profiles data
+ * @returns Formatted prediction object for the application
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const mapPrediction = (row: any): Prediction => ({
     id: row.id,
     userId: row.user_id,

@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -13,6 +12,7 @@ interface AuthContextType {
     signInWithGoogle: () => Promise<void>;
     signInWithApple: () => Promise<void>;
     signOut: () => Promise<void>;
+    refreshRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
-                await checkAdminRole(session.user.id);
+                await checkAdminRole(session.user);
             }
             setIsLoading(false);
         });
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
-                await checkAdminRole(session.user.id);
+                await checkAdminRole(session.user);
             } else {
                 setIsAdmin(false);
             }
@@ -49,20 +49,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => subscription.unsubscribe();
     }, []);
 
-    const checkAdminRole = async (userId: string) => {
+    const checkAdminRole = async (user: any) => {
         try {
-            const { data } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', userId)
-                .single();
+            if (!user) {
+                setIsAdmin(false);
+                return;
+            }
 
-            console.log('Admin Check:', { userId, role: data?.role });
-            const isAdminUser = data?.role?.toLowerCase() === 'admin';
-            setIsAdmin(isAdminUser);
+            // Read from cached metadata
+            const cachedRole = user.user_metadata?.role;
+
+            console.log('Admin Check (from cache):', {
+                userId: user.id,
+                role: cachedRole,
+                isAdmin: cachedRole === 'admin'
+            });
+
+            if (cachedRole) {
+                setIsAdmin(cachedRole === 'admin');
+            } else {
+                // If no cached role, sync from database
+                console.log('No cached role found, syncing from database...');
+                setIsAdmin(false); // Default to false until synced
+                await refreshRole();
+            }
         } catch (err) {
-            console.error('Error fetching role:', err);
+            console.error('Error checking role:', err);
             setIsAdmin(false);
+        }
+    };
+
+    const refreshRole = async () => {
+        try {
+            const response = await fetch('/api/auth/sync-role', { method: 'POST' });
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('Role refreshed from database:', data.role);
+                setIsAdmin(data.role === 'admin');
+
+                // Trigger auth state refresh to update user metadata
+                await supabase.auth.refreshSession();
+            }
+        } catch (err) {
+            console.error('Error refreshing role:', err);
         }
     };
 
@@ -83,8 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             },
         });
     };
-
-    const router = useRouter();
 
     const signOut = async () => {
         try {
@@ -117,7 +145,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, isLoading, isAdmin, signInWithGoogle, signInWithApple, signOut }}>
+        <AuthContext.Provider value={{
+            user,
+            session,
+            isLoading,
+            isAdmin,
+            signInWithGoogle,
+            signInWithApple,
+            signOut,
+            refreshRole
+        }}>
             {children}
         </AuthContext.Provider>
     );

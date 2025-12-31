@@ -7,7 +7,7 @@ import PredictionCard from '@/components/predictions/PredictionCard';
 import SponsoredCard from '@/components/ads/SponsoredCard';
 import PredictionForm from '@/components/predictions/PredictionForm';
 import CategoryTabs from '@/components/predictions/CategoryTabs';
-import { Prediction, Advertisement } from '@/types';
+import { Prediction, Advertisement, Affiliate } from '@/types';
 
 export default function DashboardPage() {
     const { user } = useAuth();
@@ -20,6 +20,7 @@ export default function DashboardPage() {
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showForm, setShowForm] = useState(false);
     const [ads, setAds] = useState<Advertisement[]>([]);
+    const [affiliates, setAffiliates] = useState<Record<string, Affiliate>>({});
 
     // Filter Logic
     const filteredPredictions = useMemo(() => selectedCategory === 'all'
@@ -29,10 +30,10 @@ export default function DashboardPage() {
     // Mix Logic (Ads + Predictions)
     const mixedItems = useMemo(() => filteredPredictions.reduce<(Prediction | { type: 'ad', data: Advertisement })[]>((acc, curr, index) => {
         acc.push(curr);
-        // Inject Ad every 5 items (less intrusive)
-        if ((index + 1) % 5 === 0 && ads.length > 0) {
+        // Inject Ad after first item (index 0 - making it 2nd) and then every 5 items
+        if (ads.length > 0 && index % 5 === 0) {
             // cycle through ads
-            const adIndex = Math.floor(index / 5) % ads.length;
+            const adIndex = (index / 5) % ads.length;
             acc.push({ type: 'ad', data: ads[adIndex] });
         }
         return acc;
@@ -75,7 +76,26 @@ export default function DashboardPage() {
                 console.error("Failed to fetch ads", err);
             }
         };
+
+
+        const fetchAffiliates = async () => {
+            try {
+                const res = await fetch('/api/affiliates');
+                if (res.ok) {
+                    const { affiliates: data } = await res.json();
+                    const map: Record<string, Affiliate> = {};
+                    (data || []).forEach((a: Affiliate) => {
+                        if (a.category) map[a.category] = a;
+                    });
+                    setAffiliates(map);
+                }
+            } catch (e) {
+                console.error('Failed to fetch affiliates', e);
+            }
+        };
+
         fetchAds();
+        fetchAffiliates();
     }, []);
 
     // Fetch Predictions when User is ready
@@ -283,6 +303,7 @@ export default function DashboardPage() {
                                                 prediction={item as Prediction}
                                                 onUpdateOutcome={handleUpdateOutcome}
                                                 onDelete={handleDeleteCall}
+                                                activeAffiliate={affiliates[(item as Prediction).category]}
                                             />
                                         )}
                                     </div>
@@ -301,6 +322,7 @@ export default function DashboardPage() {
                                                 prediction={mixedItems[currentCardIndex] as Prediction}
                                                 onUpdateOutcome={handleUpdateOutcome}
                                                 onDelete={handleDeleteCall}
+                                                activeAffiliate={affiliates[(mixedItems[currentCardIndex] as Prediction).category]}
                                             />
                                         )}
                                     </div>

@@ -28,8 +28,28 @@ export async function GET(request: NextRequest) {
             }
         );
 
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+        console.log('Auth callback - Session exchange result:', {
+            hasSession: !!data?.session,
+            userId: data?.session?.user?.id,
+            error: error?.message
+        });
+
+        if (!error && data.session) {
+            // Sync user role to metadata on successful login
+            try {
+                await fetch(`${origin}/api/auth/sync-role`, {
+                    method: 'POST',
+                    headers: {
+                        'Cookie': request.headers.get('cookie') || ''
+                    }
+                });
+            } catch (syncError) {
+                // Don't block login if sync fails, just log it
+                console.error('Role sync failed:', syncError);
+            }
+
             return NextResponse.redirect(`${origin}${next}`);
         } else {
             console.error('Auth Code Exchange Error:', error);

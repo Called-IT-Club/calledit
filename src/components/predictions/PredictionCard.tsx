@@ -1,7 +1,6 @@
 'use client';
 
-import { Prediction } from '@/types';
-import { AFFILIATE_LINKS } from '@/config/affiliates';
+import { Prediction, Affiliate } from '@/types';
 import { useState } from 'react';
 import Link from 'next/link';
 
@@ -9,9 +8,10 @@ interface PredictionCardProps {
     prediction: Prediction;
     onUpdateOutcome: (id: string, outcome: 'true' | 'false', evidenceImageUrl?: string) => void;
     onDelete?: (id: string) => void;
+    activeAffiliate?: Affiliate;
 }
 
-export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, isReadOnly = false }: PredictionCardProps & { isReadOnly?: boolean }) {
+export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, isReadOnly = false, activeAffiliate }: PredictionCardProps & { isReadOnly?: boolean }) {
     const [showOutcomeMenu, setShowOutcomeMenu] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [celebrating, setCelebrating] = useState(false);
@@ -128,23 +128,27 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     {prediction.author && (
-                        <div className="flex items-center gap-2 mr-2">
+                        <Link
+                            href={`/profile/${prediction.userId}`}
+                            className="flex items-center gap-2 mr-2 hover:opacity-80 transition-opacity group"
+                            title={`View ${prediction.author.name}'s profile`}
+                        >
                             <img
                                 src={prediction.author.avatarUrl || `https://ui-avatars.com/api/?name=${prediction.author.name}&background=random`}
                                 alt={prediction.author.name}
-                                className="w-8 h-8 rounded-full border border-gray-100"
+                                className="w-8 h-8 rounded-full border border-gray-100 group-hover:border-blue-300 transition-colors"
                             />
                             <div className="flex flex-col">
-                                <span className="text-xs font-bold text-gray-900 leading-none">
+                                <span className="text-xs font-bold text-gray-900 leading-none group-hover:text-blue-600 transition-colors">
                                     {prediction.author.name}
                                 </span>
                                 {prediction.author.username && (
-                                    <span className="text-[10px] text-gray-400 leading-none">
+                                    <span className="text-[10px] text-gray-400 leading-none group-hover:text-blue-400 transition-colors">
                                         @{prediction.author.username}
                                     </span>
                                 )}
                             </div>
-                        </div>
+                        </Link>
                     )}
 
                     <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-bold uppercase tracking-wider ${categoryInfo.color}`}>
@@ -251,14 +255,21 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                         </div>
                     )}
 
-                    {AFFILIATE_LINKS[prediction.category] && (
+                    {activeAffiliate && (
                         <a
-                            href={AFFILIATE_LINKS[prediction.category]!.url}
+                            href={activeAffiliate.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 transition-colors ${AFFILIATE_LINKS[prediction.category]!.color} bg-opacity-10 hover:bg-opacity-20`}
+                            onClick={() => {
+                                fetch('/api/affiliates/track', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ affiliateId: activeAffiliate.id, type: 'click' })
+                                }).catch(e => console.error('Track Click Error:', e));
+                            }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 transition-colors ${activeAffiliate.color} bg-opacity-10 hover:bg-opacity-20`}
                         >
-                            <span>💰</span> {AFFILIATE_LINKS[prediction.category]!.label}
+                            <span>💰</span> {activeAffiliate.label}
                         </a>
                     )}
 

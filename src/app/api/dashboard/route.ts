@@ -1,9 +1,17 @@
 import { createServerClient } from '@supabase/ssr';
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { mapPrediction } from '@/lib/mappers';
 
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/dashboard
+ * Fetches all predictions for the authenticated user.
+ * Requires authentication - returns 401 if not logged in.
+ * Excludes soft-deleted predictions.
+ * 
+ * @returns {Promise<NextResponse>} JSON response with user's predictions array
+ */
+export async function GET() {
     try {
         const cookieStore = await cookies();
         const supabase = createServerClient(

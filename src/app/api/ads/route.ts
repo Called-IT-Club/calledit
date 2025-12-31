@@ -1,8 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/ads
+ * Fetches all active advertisements from the database.
+ * This is a public endpoint - no authentication required.
+ * 
+ * @returns {Promise<NextResponse>} JSON response with active ads array
+ */
+export async function GET() {
     try {
         const cookieStore = await cookies();
         const supabase = createServerClient(

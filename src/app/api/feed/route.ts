@@ -3,6 +3,18 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { mapPrediction } from '@/lib/mappers';
 
+/**
+ * GET /api/feed
+ * Fetches public predictions feed with cursor-based pagination.
+ * This is a public endpoint - no authentication required.
+ * 
+ * Query Parameters:
+ * - limit: Number of predictions to return (default: 20)
+ * - cursor: created_at timestamp for pagination (returns predictions older than cursor)
+ * 
+ * @param {NextRequest} req - Request with query parameters
+ * @returns {Promise<NextResponse>} JSON response with public predictions array
+ */
 export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
