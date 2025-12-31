@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function HomeAuthButtons() {
-    const { signInWithGoogle, signInWithApple, user, isLoading } = useAuth();
+    const { signInWithGoogle, user, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -24,14 +24,6 @@ export default function HomeAuthButtons() {
             >
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-6 h-6" alt="Google" />
                 <span>Sign in with Google</span>
-            </button>
-
-            <button
-                onClick={() => signInWithApple()}
-                className="btn bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3 py-3 text-lg w-full shadow-sm transition-all hover:scale-[1.02]"
-            >
-                <img src="https://www.svgrepo.com/show/445136/apple.svg" className="w-6 h-6" alt="Apple" />
-                <span>Sign in with Apple</span>
             </button>
         </div>
     );

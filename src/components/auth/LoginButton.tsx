@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 
 export default function LoginButton() {
-    const { signInWithGoogle, signInWithApple, user, signOut, isAdmin } = useAuth();
+    const { signInWithGoogle, user, signOut, isAdmin } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
 
 
@@ -69,13 +69,6 @@ export default function LoginButton() {
                     >
                         <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" alt="Google" />
                         <span>Sign in with Google</span>
-                    </button>
-                    <button
-                        onClick={() => signInWithApple()}
-                        className="btn bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2 w-full"
-                    >
-                        <img src="https://www.svgrepo.com/show/445136/apple.svg" className="w-4 h-4" alt="Apple" />
-                        <span>Sign in with Apple</span>
                     </button>
 
                 </div>
