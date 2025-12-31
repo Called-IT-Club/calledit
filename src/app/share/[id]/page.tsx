@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Prediction, User } from '@/types';
 import Link from 'next/link';
+import QRCode from 'react-qr-code';
 import { useRef } from 'react';
 import { getCategoryRaw } from '@/config/categories';
 
@@ -11,6 +12,14 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     // Unwrap params using React.use()
     const { id } = use(params);
     const cardRef = useRef<HTMLDivElement>(null);
+
+    // Construct Share URL for QR Code
+    const [shareUrl, setShareUrl] = useState('');
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setShareUrl(`${window.location.origin}/share/${id}`);
+        }
+    }, [id]);
 
     const [prediction, setPrediction] = useState<Prediction | null>(null);
     const [author, setAuthor] = useState<User | null>(null);
@@ -201,10 +210,26 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                         </div>
 
                         {/* Top Bar: Brand & Category */}
-                        <div className="relative z-10 p-8 flex justify-between items-start">
+                        <div className="relative z-10 p-6 flex justify-between items-center border-b"
+                            style={{
+                                backgroundColor: '#f9fafb',
+                                borderBottom: '1px solid #f3f4f6'
+                            }}>
                             <div className="flex items-center gap-3 text-left">
-                                <div className="bg-white p-1 rounded-lg shadow-sm border border-gray-100">
-                                    <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                                <div className="p-1.5 rounded-lg shadow-sm border flex items-center justify-center"
+                                    style={{ backgroundColor: '#ffffff', borderColor: '#f3f4f6' }}>
+                                    {shareUrl ? (
+                                        <QRCode
+                                            value={shareUrl}
+                                            size={64}
+                                            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                            viewBox={`0 0 256 256`}
+                                            fgColor="#111827"
+                                            bgColor="#ffffff"
+                                        />
+                                    ) : (
+                                        <div className="w-[64px] h-[64px] bg-gray-100 animate-pulse rounded"></div>
+                                    )}
                                 </div>
                                 <div>
                                     <Link href="/" className="font-black italic tracking-tighter text-xl no-underline block leading-none pt-1" style={{ color: '#1e40af' }}>
@@ -401,8 +426,25 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                 </div>
 
                 {/* Helper Text */}
-                <div className="mt-4 text-xs text-gray-400 font-medium tracking-wide pb-8">
+                <div className="mt-4 text-xs text-gray-400 font-medium tracking-wide pb-4">
                     TAP TO SHARE PREDICTION
+                </div>
+
+                {/* Open App / Conversion CTAs */}
+                <div className="flex flex-col gap-3 w-full max-w-[320px] pb-8 animate-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-backwards">
+                    <Link
+                        href="/"
+                        className="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
+                    >
+                        <span>🚀</span> Make Your Own Call
+                    </Link>
+
+                    <Link
+                        href="/feed"
+                        className="w-full py-3 px-6 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                        <span>👀</span> See What Others Are Calling
+                    </Link>
                 </div>
             </main>
         </div>

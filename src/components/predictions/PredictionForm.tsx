@@ -27,6 +27,8 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
 
     const [error, setError] = useState<string | null>(null);
 
+    const [lastAnalyzedText, setLastAnalyzedText] = useState('');
+
     const analyzePrediction = async (textToAnalyze: string) => {
         if (!textToAnalyze.trim()) {
             setAiCategory(null);
@@ -35,11 +37,13 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
             return;
         }
 
+        // Prevent redundant calls
+        if (textToAnalyze === lastAnalyzedText && aiCategory) return;
+
         setIsAnalyzing(true);
-        setError(null); // Clear previous errors
+        setError(null);
 
         try {
-            // Call the consolidated API route for analysis
             const response = await fetch('/api/ai/parse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -47,6 +51,9 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
             });
 
             if (!response.ok) {
+                if (response.status === 429 || response.status === 503) {
+                    throw new Error("AI Quota may have been reached. Please try again later or select a category manually.");
+                }
                 if (response.status === 401) {
                     throw new Error("Session expired. Please log in to use AI features.");
                 }
@@ -56,29 +63,37 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
 
             const result = await response.json();
 
-            // Handle the new schema from /api/ai/parse (result.meta)
             if (result.category) {
                 setAiCategory(result.category);
-
-                // New schema structure: tags/entities are in result.meta
                 setAiMeta({
                     tags: result.meta?.tags || [],
                     entities: result.meta?.entities || [],
                     confidence: result.meta?.confidence
                 });
 
+                // Validate date is in the future (or today)
                 if (result.targetDate) {
-                    setTargetDate(result.targetDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const suggested = new Date(result.targetDate);
+                    // allow today
+                    if (suggested >= today) {
+                        setTargetDate(result.targetDate);
+                    }
                 }
+                setLastAnalyzedText(textToAnalyze);
             }
         } catch (error: any) {
             console.error('AI Analysis failed:', error);
             setError(error.message || "Failed to analyze prediction");
-            // Don't clear category on error, maybe they want to manually override?
-            // But if it's a safety error, we probably should block submission.
-            // For now, error state handles the blocking.
         } finally {
             setIsAnalyzing(false);
+        }
+    };
+
+    const handleBlur = () => {
+        if (prediction.trim() && !isAnalyzing) {
+            analyzePrediction(prediction.trim());
         }
     };
 
@@ -141,13 +156,23 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
             // Update UI state just in case we don't unmount (though we usually do)
             setAiCategory(newCategory);
             setAiMeta(newMeta);
-            if (result.targetDate) setTargetDate(result.targetDate);
+
+            // Validate date on submit flow too
+            let cleanDate = result.targetDate;
+            if (cleanDate) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (new Date(cleanDate) < today) {
+                    cleanDate = undefined; // Discard past dates
+                }
+            }
+            if (cleanDate) setTargetDate(cleanDate);
 
             // AUTO SUBMIT with the new data
             onSubmit({
                 prediction: textToAnalyze,
                 category: newCategory,
-                targetDate: result.targetDate || targetDate || undefined,
+                targetDate: cleanDate || targetDate || undefined,
                 meta: newMeta,
                 isPrivate,
             });
@@ -194,6 +219,7 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                     <textarea
                         value={prediction}
                         onChange={(e) => setPrediction(e.target.value)}
+                        onBlur={handleBlur}
                         placeholder="e.g., The Lakers will win the NBA championship"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                         rows={3}
@@ -222,21 +248,21 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
 
                 {/* AI Meta Display (Tags & Entities) */}
                 {aiMeta && (
-                    <div className="fade-in bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <div className="fade-in bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
                         <div className="flex flex-wrap gap-2 text-xs">
                             {aiMeta.entities?.map((entity: string) => (
-                                <span key={entity} className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-full font-medium">
-                                    🏛 {entity}
+                                <span key={entity} className="bg-sky-50 text-sky-700 border border-sky-100 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
+                                    <span>🏛</span> {entity}
                                 </span>
                             ))}
                             {aiMeta.tags?.map((tag: string) => (
-                                <span key={tag} className="bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">
+                                <span key={tag} className="bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-1 rounded-full font-medium">
                                     #{tag}
                                 </span>
                             ))}
                             {aiMeta.confidence && (
-                                <span className="text-gray-400 ml-auto flex items-center">
-                                    Confidence: {Math.round(aiMeta.confidence * 100)}%
+                                <span className="text-gray-400 ml-auto flex items-center font-medium text-[10px] uppercase tracking-wider">
+                                    {Math.round(aiMeta.confidence * 100)}% Confidence
                                 </span>
                             )}
                         </div>
@@ -254,21 +280,44 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                 {aiCategory && !isAnalyzing && (
                     <div className="fade-in">
                         <label className="block text-sm font-medium mb-2">
-                            AI detected category:
+                            AI Analysis Results:
                         </label>
-                        <div className={`category-${aiCategory.split('-')[0]} px-4 py-3 rounded-lg flex items-center gap-3`}
-                            style={{ backgroundColor: getCategoryRaw(aiCategory).colors.bgHex }}>
-                            <span className="text-2xl">{getCategoryRaw(aiCategory).emoji}</span>
-                            <span className="font-medium" style={{ color: getCategoryRaw(aiCategory).colors.hex }}>
-                                {getCategoryRaw(aiCategory).label}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setAiCategory(null)}
-                                className="ml-auto text-sm text-gray-600 hover:text-gray-800"
-                            >
-                                Change
-                            </button>
+                        <div className={`category-${aiCategory.split('-')[0]} px-4 py-3 rounded-lg flex flex-col gap-2 shadow-sm border border-transparent`}
+                            style={{
+                                backgroundColor: getCategoryRaw(aiCategory).colors.bgHex,
+                                borderColor: getCategoryRaw(aiCategory).colors.bg
+                            }}>
+                            {/* Row 1: Category Info & Edit Button */}
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-3xl filter drop-shadow-sm">{getCategoryRaw(aiCategory).emoji}</span>
+                                    <span className="font-bold text-base" style={{ color: getCategoryRaw(aiCategory).colors.hex }}>
+                                        {getCategoryRaw(aiCategory).label}
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiCategory(null)}
+                                    className="text-sm font-medium px-3 py-1.5 rounded-md bg-white/50 hover:bg-white text-gray-700 transition-colors shadow-sm"
+                                >
+                                    Edit
+                                </button>
+                            </div>
+
+                            {/* Row 2: Target Date (My Own Line) */}
+                            {targetDate && (
+                                <div className="flex items-center gap-2 pl-1 border-t border-white/20 pt-2 mt-1">
+                                    <span className="text-sm font-medium opacity-80" style={{ color: getCategoryRaw(aiCategory).colors.hex }}>
+                                        Target Date:
+                                    </span>
+                                    <span className="text-sm font-bold bg-white/60 px-2 py-0.5 rounded text-gray-800 border border-white/40">
+                                        {(() => {
+                                            const d = new Date(targetDate + 'T00:00:00');
+                                            return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleDateString('en-US', { month: 'short' })}-${d.getFullYear()}`;
+                                        })()}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -328,6 +377,7 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                                     <input
                                         type="date"
                                         value={targetDate}
+                                        min={new Date().toLocaleDateString('en-CA')} // YYYY-MM-DD in local time
                                         onChange={(e) => setTargetDate(e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
@@ -377,7 +427,7 @@ export default function PredictionForm({ onSubmit, onCancel }: PredictionFormPro
                                 <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                                 Analyzing...
                             </>
-                        ) : aiCategory ? 'Make Call' : 'Analyze & Call'}
+                        ) : aiCategory ? 'Make the Call' : 'Analyze & Call'}
                     </button>
                     <button
                         type="button"
