@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/layout/Header';
@@ -10,7 +10,7 @@ import PredictionForm from '@/components/predictions/PredictionForm';
 import CategoryTabs from '@/components/predictions/CategoryTabs';
 import { Prediction, Advertisement, Affiliate, PredictionCategory } from '@/types';
 
-export default function DashboardPage() {
+function DashboardContent() {
     const { user, signInWithGoogle } = useAuth();
     const searchParams = useSearchParams();
 
@@ -381,5 +381,13 @@ export default function DashboardPage() {
                 )}
             </main >
         </div >
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Loading Dashboard...</div>}>
+            <DashboardContent />
+        </Suspense>
     );
 }
