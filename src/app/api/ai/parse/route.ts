@@ -98,7 +98,7 @@ export async function POST(req: Request) {
 
         // Generate AI prompt with the sanitized text
         const model = genAI.getGenerativeModel({
-            model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash",
+            model: process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash-lite",
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: schema,
