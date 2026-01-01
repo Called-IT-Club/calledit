@@ -7,8 +7,6 @@ export default function LoginButton() {
     const { signInWithGoogle, user, signOut, isAdmin } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
 
-
-
     if (user) {
         return (
             <div className="relative">
@@ -49,30 +47,6 @@ export default function LoginButton() {
         );
     }
 
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="btn btn-primary flex items-center gap-2"
-            >
-                <span>Sign In</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 py-2 z-50 flex flex-col gap-1 p-2">
-                    <button
-                        onClick={() => signInWithGoogle()}
-                        className="btn bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2 w-full"
-                    >
-                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" alt="Google" />
-                        <span>Sign in with Google</span>
-                    </button>
-
-                </div>
-            )}
-        </div>
-    );
+    // Return null if not logged in - "Make A Call" handles the auth prompt now.
+    return null;
 }

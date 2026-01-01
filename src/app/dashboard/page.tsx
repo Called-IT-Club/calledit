@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/layout/Header';
 import PredictionCard from '@/components/predictions/PredictionCard';
@@ -10,7 +11,8 @@ import CategoryTabs from '@/components/predictions/CategoryTabs';
 import { Prediction, Advertisement, Affiliate, PredictionCategory } from '@/types';
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user, signInWithGoogle } = useAuth();
+    const searchParams = useSearchParams();
 
     // State Definitions
     const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -21,6 +23,13 @@ export default function DashboardPage() {
     const [showForm, setShowForm] = useState(false);
     const [ads, setAds] = useState<Advertisement[]>([]);
     const [affiliates, setAffiliates] = useState<Record<string, Affiliate>>({});
+
+    // Check for auto-open param
+    useEffect(() => {
+        if (searchParams.get('new_call') === 'true') {
+            setShowForm(true);
+        }
+    }, [searchParams]);
 
     // Filter Logic
     const filteredPredictions = useMemo(() => selectedCategory === 'all'
@@ -126,18 +135,13 @@ export default function DashboardPage() {
         if (user) {
             fetchPredictions();
         } else {
-            // setTimeout(() => setLoading(false), 2000); // Timeout if no user loads? 
-            // Better: AuthContext should handle loading state, but for now:
+            // If no user after a short delay, stop loading so we can show login
             const timer = setTimeout(() => {
-                // if still no user after 1s, maybe not logged in? 
-                // But AuthContext user is initially null.
+                setLoading(false);
             }, 1000);
             return () => clearTimeout(timer);
         }
     }, [user]);
-
-    // Correction: We need a dedicated fetch function to reuse if needed, or just keep it inside useEffect.
-    // The original code had `fetchPredictions` outside. Let's keep it simple.
 
     const handleNewPrediction = async (prediction: any) => {
         try {
@@ -218,140 +222,160 @@ export default function DashboardPage() {
 
             {/* Main Content */}
             <main className="max-w-6xl mx-auto px-4 py-8">
-                {/* Action Bar */}
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold">My Calls</h2>
-                    <button
-                        onClick={() => {
-                            if (!user) {
-                                alert('Please sign in to make a call');
-                                return;
-                            }
-                            setShowForm(!showForm);
-                        }}
-                        className="btn btn-primary"
-                    >
-                        {showForm ? 'Cancel' : '+ New Call'}
-                    </button>
-                </div>
-
-                {/* Prediction Form */}
-                {showForm && (
-                    <div className="mb-6 fade-in">
-                        <PredictionForm
-                            onSubmit={handleNewPrediction}
-                            onCancel={() => setShowForm(false)}
-                        />
-                    </div>
-                )}
-
-                {/* Category Tabs */}
-                <CategoryTabs
-                    selected={selectedCategory}
-                    onSelect={setSelectedCategory}
-                />
-
-                {/* View Toggles & List */}
-                {loading ? (
-                    <div className="text-center py-12 text-gray-500">Loading predictions...</div>
-                ) : filteredPredictions.length === 0 ? (
-                    <div className="text-center py-12">
-                        <div className="text-4xl mb-4">🔮</div>
-                        <p className="text-gray-600">
-                            No predictions yet. Make your first call!
-                        </p>
+                {!loading && !user ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md w-full">
+                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
+                            <p className="text-gray-500 mb-8">
+                                You need to be signed in to view your calls and make new predictions.
+                            </p>
+                            <button
+                                onClick={() => signInWithGoogle()}
+                                className="w-full btn bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3 py-3 rounded-xl font-medium transition-all hover:shadow-md"
+                            >
+                                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                                <span>Sign in with Google</span>
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <>
-                        {/* View Toggle */}
-                        <div className="flex justify-end mb-4">
-                            <div className="bg-gray-100 p-1 rounded-lg inline-flex">
-                                <button
-                                    onClick={() => setViewMode('list')}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'list'
-                                        ? 'bg-white shadow-sm text-gray-900'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    📋 List
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('cards')}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'cards'
-                                        ? 'bg-white shadow-sm text-gray-900'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    🃏 Cards
-                                </button>
+                        {/* Action Bar */}
+                        <div className="mb-8 flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-black italic tracking-tighter text-gray-900">
+                                    MY CALLS
+                                </h1>
+                                <p className="text-gray-500 font-medium text-sm mt-1">
+                                    Track your legacy, Oracle.
+                                </p>
                             </div>
                         </div>
 
-                        {viewMode === 'list' ? (
-                            /* List View */
-                            <div className="space-y-4">
-                                {mixedItems.map((item, index) => (
-                                    <div key={'id' in item ? item.id : `mixed-${index}`}>
-                                        {'type' in item && item.type === 'ad' ? (
-                                            <SponsoredCard ad={(item as any).data} />
-                                        ) : (
-                                            <PredictionCard
-                                                prediction={item as Prediction}
-                                                onUpdateOutcome={handleUpdateOutcome}
-                                                onDelete={handleDeleteCall}
-                                                activeAffiliate={affiliates[(item as Prediction).category]}
-                                            />
-                                        )}
-                                    </div>
-                                ))}
+                        {/* Prediction Form */}
+                        {showForm && (
+                            <div className="mb-6 fade-in">
+                                <PredictionForm
+                                    onSubmit={handleNewPrediction}
+                                    onCancel={() => setShowForm(false)}
+                                />
+                            </div>
+                        )}
+
+                        {/* Category Tabs */}
+                        <CategoryTabs
+                            selected={selectedCategory}
+                            onSelect={setSelectedCategory}
+                        />
+
+                        {/* View Toggles & List */}
+                        {loading ? (
+                            <div className="text-center py-12 text-gray-500">Loading predictions...</div>
+                        ) : filteredPredictions.length === 0 ? (
+                            <div className="text-center py-12">
+                                <div className="text-4xl mb-4">🔮</div>
+                                <p className="text-gray-600">
+                                    No predictions yet. Make your first call!
+                                </p>
                             </div>
                         ) : (
-                            /* Focus Mode View (One Card at a Time) */
-                            <div className="flex flex-col items-center justify-center py-8">
-                                <div className="relative w-full max-w-md">
-                                    {/* Card Container */}
-                                    <div className="transition-all duration-300 transform">
-                                        {'type' in mixedItems[currentCardIndex] && (mixedItems[currentCardIndex] as any).type === 'ad' ? (
-                                            <SponsoredCard ad={(mixedItems[currentCardIndex] as any).data} />
-                                        ) : (
-                                            <PredictionCard
-                                                prediction={mixedItems[currentCardIndex] as Prediction}
-                                                onUpdateOutcome={handleUpdateOutcome}
-                                                onDelete={handleDeleteCall}
-                                                activeAffiliate={affiliates[(mixedItems[currentCardIndex] as Prediction).category]}
-                                            />
-                                        )}
-                                    </div>
-
-                                    {/* Navigation Controls (Overlay or Side) */}
-                                    <div className="flex items-center justify-between mt-6 px-4">
+                            <>
+                                {/* View Toggle */}
+                                <div className="flex justify-end mb-4">
+                                    <div className="bg-gray-100 p-1 rounded-lg inline-flex">
                                         <button
-                                            onClick={() => setCurrentCardIndex(prev => Math.max(0, prev - 1))}
-                                            disabled={currentCardIndex === 0}
-                                            className="btn btn-secondary rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                                            onClick={() => setViewMode('list')}
+                                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'list'
+                                                ? 'bg-white shadow-sm text-gray-900'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                                }`}
                                         >
-                                            ←
+                                            📋 List
                                         </button>
-
-                                        <span className="text-sm font-medium text-gray-500">
-                                            {currentCardIndex + 1} / {mixedItems.length}
-                                        </span>
-
                                         <button
-                                            onClick={() => setCurrentCardIndex(prev => Math.min(mixedItems.length - 1, prev + 1))}
-                                            disabled={currentCardIndex === mixedItems.length - 1}
-                                            className="btn btn-secondary rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                                            onClick={() => setViewMode('cards')}
+                                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'cards'
+                                                ? 'bg-white shadow-sm text-gray-900'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                                }`}
                                         >
-                                            →
+                                            🃏 Cards
                                         </button>
                                     </div>
-
-                                    {/* Keyboard Hint */}
-                                    <p className="text-center text-xs text-gray-400 mt-4">
-                                        Tip: Use arrow keys to navigate
-                                    </p>
                                 </div>
-                            </div>
+
+                                {viewMode === 'list' ? (
+                                    /* List View */
+                                    <div className="space-y-4">
+                                        {mixedItems.map((item, index) => (
+                                            <div key={'id' in item ? item.id : `mixed-${index}`}>
+                                                {'type' in item && item.type === 'ad' ? (
+                                                    <SponsoredCard ad={(item as any).data} />
+                                                ) : (
+                                                    <PredictionCard
+                                                        prediction={item as Prediction}
+                                                        onUpdateOutcome={handleUpdateOutcome}
+                                                        onDelete={handleDeleteCall}
+                                                        activeAffiliate={affiliates[(item as Prediction).category]}
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    /* Focus Mode View (One Card at a Time) */
+                                    <div className="flex flex-col items-center justify-center py-8">
+                                        <div className="relative w-full max-w-md">
+                                            {/* Card Container */}
+                                            <div className="transition-all duration-300 transform">
+                                                {'type' in mixedItems[currentCardIndex] && (mixedItems[currentCardIndex] as any).type === 'ad' ? (
+                                                    <SponsoredCard ad={(mixedItems[currentCardIndex] as any).data} />
+                                                ) : (
+                                                    <PredictionCard
+                                                        prediction={mixedItems[currentCardIndex] as Prediction}
+                                                        onUpdateOutcome={handleUpdateOutcome}
+                                                        onDelete={handleDeleteCall}
+                                                        activeAffiliate={affiliates[(mixedItems[currentCardIndex] as Prediction).category]}
+                                                    />
+                                                )}
+                                            </div>
+
+                                            {/* Navigation Controls (Overlay or Side) */}
+                                            <div className="flex items-center justify-between mt-6 px-4">
+                                                <button
+                                                    onClick={() => setCurrentCardIndex(prev => Math.max(0, prev - 1))}
+                                                    disabled={currentCardIndex === 0}
+                                                    className="btn btn-secondary rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    ←
+                                                </button>
+
+                                                <span className="text-sm font-medium text-gray-500">
+                                                    {currentCardIndex + 1} / {mixedItems.length}
+                                                </span>
+
+                                                <button
+                                                    onClick={() => setCurrentCardIndex(prev => Math.min(mixedItems.length - 1, prev + 1))}
+                                                    disabled={currentCardIndex === mixedItems.length - 1}
+                                                    className="btn btn-secondary rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    →
+                                                </button>
+                                            </div>
+
+                                            {/* Keyboard Hint */}
+                                            <p className="text-center text-xs text-gray-400 mt-4">
+                                                Tip: Use arrow keys to navigate
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </>
                 )}

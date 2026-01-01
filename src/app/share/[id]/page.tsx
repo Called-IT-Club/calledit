@@ -436,14 +436,14 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                         href="/"
                         className="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
                     >
-                        <span>🚀</span> Make Your Own Call
+                        <span>🚀</span> Make A Call
                     </Link>
 
                     <Link
                         href="/feed"
                         className="w-full py-3 px-6 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-2 text-sm"
                     >
-                        <span>👀</span> See What Others Are Calling
+                        <span>👀</span> Live Feed
                     </Link>
                 </div>
             </main>

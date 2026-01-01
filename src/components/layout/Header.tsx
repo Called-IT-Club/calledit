@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import LoginButton from '@/components/auth/LoginButton';
 
 export default function Header() {
     const pathname = usePathname();
+    const { user } = useAuth();
     const isFeed = pathname === '/feed';
-    const isDashboard = pathname === '/dashboard';
 
     return (
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -28,32 +29,39 @@ export default function Header() {
                 </Link>
 
                 {/* Navigation & Auth */}
-                <div className="flex items-center gap-3">
-                    {/* Show 'Dashboard' link if not on dashboard */}
-                    {!isDashboard && (
+                <div className="flex items-center gap-2">
+                    {/* Make A Call Action - Primary */}
+                    <Link
+                        href="/dashboard?new_call=true"
+                        className="hidden sm:inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg mr-2"
+                    >
+                        <span>+</span>
+                        Make A Call
+                    </Link>
+
+                    {/* Dashboard Link - Only visible on Feed Page and if logged in */}
+                    {isFeed && user && (
                         <Link
                             href="/dashboard"
-                            className="hidden sm:inline-block text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-md transition-colors"
+                            className="text-sm font-bold px-4 py-2 rounded-full transition-all border text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent flex items-center gap-2"
                         >
+                            <img src="/logo.png" alt="My Calls" className="w-5 h-5 object-contain" />
                             My Calls
                         </Link>
                     )}
 
-                    {/* Show 'Live Feed' link if not on feed */}
+                    {/* Live Feed Link - Hidden on Feed Page */}
                     {!isFeed && (
                         <Link
                             href="/feed"
-                            className="text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-md transition-colors flex items-center gap-2"
+                            className="text-sm font-bold px-4 py-2 rounded-full transition-all border flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent"
                         >
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            </span>
+                            <span>👀</span>
                             Live Feed
                         </Link>
                     )}
 
-                    {/* Always show Auth Button */}
+                    {/* Always show Auth Button (Circle only when logged in) */}
                     <LoginButton />
                 </div>
             </div>
