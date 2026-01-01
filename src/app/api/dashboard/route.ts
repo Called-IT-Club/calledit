@@ -44,7 +44,8 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from('predictions')
-            .select('*, profiles(full_name, username, avatar_url, email)')
+            // Fetch reaction and bookmark data for mapping
+            .select('*, profiles(full_name, username, avatar_url, email), prediction_reactions(*), prediction_bookmarks(*)')
             .eq('user_id', user.id)
             .is('deleted_at', null) // Soft Delete Filter
             .order('created_at', { ascending: false });
@@ -54,7 +55,8 @@ export async function GET() {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const predictions = data ? data.map(mapPrediction) : []; // Map using the centralized mapper
+        // Pass user.id to mapper for determining user-specific state
+        const predictions = data ? data.map(row => mapPrediction(row, user.id)) : [];
 
         return NextResponse.json({ predictions });
 

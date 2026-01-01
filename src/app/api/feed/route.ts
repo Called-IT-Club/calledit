@@ -22,9 +22,13 @@ export async function GET(req: NextRequest) {
 
         const supabase = await createSupabaseServerClient();
 
+        // Get optional user for contextual data (reactions/bookmarks)
+        const { data: { user } } = await supabase.auth.getUser();
+
         let query = supabase
             .from('predictions')
-            .select('*, profiles(*)')
+            // Fetch reaction and bookmark data for mapping
+            .select('*, profiles(*), prediction_reactions(*), prediction_bookmarks(*)')
             .eq('is_private', false)
             .is('deleted_at', null)
             .order('created_at', { ascending: false })
@@ -41,7 +45,8 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const predictions = data ? data.map(mapPrediction) : [];
+        // Pass user.id if available
+        const predictions = data ? data.map(row => mapPrediction(row, user?.id)) : [];
 
         return NextResponse.json({ predictions });
 

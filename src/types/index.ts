@@ -24,6 +24,9 @@ export interface Prediction {
         username?: string;
         avatarUrl?: string;
     };
+    reactions?: Record<string, number>; // e.g., { 'like': 10, 'laugh': 5 }
+    userReactions?: string[]; // e.g., ['like']
+    isBookmarked?: boolean;
 }
 
 export interface User {

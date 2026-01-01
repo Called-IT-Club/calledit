@@ -4,6 +4,8 @@ import { Prediction, Affiliate } from '@/types';
 import { useState } from 'react';
 import Link from 'next/link';
 import { getCategoryRaw } from '@/config/categories';
+import { useAuth } from '@/contexts/AuthContext';
+import LoginModal from '@/components/auth/LoginModal';
 
 interface PredictionCardProps {
     prediction: Prediction;
@@ -12,11 +14,32 @@ interface PredictionCardProps {
     activeAffiliate?: Affiliate;
 }
 
+const REACTION_TYPES: Record<string, string> = {
+    'like': '❤️',
+    'laugh': '😂',
+    'fire': '🔥',
+    'shock': '😲'
+};
+
+const REACTION_LABELS: Record<string, string> = {
+    'like': 'Love',
+    'laugh': 'Funny',
+    'fire': 'Hot Take',
+    'shock': 'Shocking'
+};
+
 export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, isReadOnly = false, activeAffiliate }: PredictionCardProps & { isReadOnly?: boolean }) {
+    const { user } = useAuth();
     const [showOutcomeMenu, setShowOutcomeMenu] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const [celebrating, setCelebrating] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
+
+    // Optimistic UI state
+    const [reactions, setReactions] = useState<Record<string, number>>(prediction.reactions || {});
+    const [userReactions, setUserReactions] = useState<string[]>(prediction.userReactions || []);
+    const [isBookmarked, setIsBookmarked] = useState(prediction.isBookmarked || false);
 
     const getCategoryInfo = () => {
         const raw = getCategoryRaw(prediction.category);
@@ -68,6 +91,72 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
         onUpdateOutcome(prediction.id, 'true', evidenceUrl);
         setShowOutcomeMenu(false);
         setSelectedImage(null);
+    };
+
+    const toggleReaction = async (type: string) => {
+        if (!user) {
+            setShowLoginModal(true);
+            return;
+        }
+
+        // Optimistic Update
+        const isReacted = userReactions.includes(type);
+        const newCount = (reactions[type] || 0) + (isReacted ? -1 : 1);
+
+        setReactions({ ...reactions, [type]: Math.max(0, newCount) });
+        setUserReactions(isReacted ? userReactions.filter(r => r !== type) : [...userReactions, type]);
+
+        try {
+            const res = await fetch('/api/reactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ predictionId: prediction.id, reactionType: type })
+            });
+
+            if (!res.ok) {
+                // Determine error message based on response
+                const data = await res.json().catch(() => ({}));
+                const msg = data.error || 'Failed to update reaction';
+                console.error('Reaction API Error:', msg);
+                throw new Error(msg);
+            }
+
+        } catch (error) {
+            console.error('Failed to toggle reaction', error);
+            // Revert on failure
+            setReactions(reactions);
+            setUserReactions(userReactions);
+        }
+    };
+
+    const toggleBookmark = async () => {
+        if (!user) {
+            setShowLoginModal(true);
+            return;
+        }
+
+        // Optimistic
+        const newState = !isBookmarked;
+        setIsBookmarked(newState);
+
+        try {
+            const res = await fetch('/api/bookmarks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ predictionId: prediction.id })
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                const msg = data.error || 'Failed to update bookmark';
+                console.error('Bookmark API Error:', msg);
+                throw new Error(msg);
+            }
+        } catch (error) {
+            console.error('Failed to toggle bookmark', error);
+            // Revert
+            setIsBookmarked(isBookmarked);
+        }
     };
 
     return (
@@ -163,22 +252,53 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                 )}
             </div>
 
-            {/* Footer: Status & Actions */}
+            {/* Footer: Reactions & Actions */}
             <div className="flex items-end justify-between mt-4 pt-4 border-t border-gray-50">
-                <div className="flex items-center gap-3">
-                    {outcomeInfo && (
-                        <span className={`text-xs flex items-center gap-1.5 ${outcomeInfo.color}`}>
-                            {outcomeInfo.emoji} {outcomeInfo.label}
-                        </span>
-                    )}
 
-                    {prediction.targetDate && (
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                            🎯 {formatDate(prediction.targetDate)}
-                        </span>
-                    )}
+                {/* Left: Reactions & Status */}
+                <div className="flex flex-col gap-2">
+                    {/* Reactions Bar */}
+                    <div className="flex items-center gap-1">
+                        {Object.entries(REACTION_TYPES).map(([type, emoji]) => {
+                            const count = reactions[type] || 0;
+                            const isReacted = userReactions.includes(type);
+
+                            return (
+                                <button
+                                    key={type}
+                                    onClick={() => toggleReaction(type)}
+                                    className={`
+                                        flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all
+                                        ${isReacted
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm transform scale-105'
+                                            : 'bg-white/50 hover:bg-white text-gray-500 hover:text-gray-900 border border-transparent hover:border-gray-200 hover:scale-105'}
+                                    `}
+                                    title={REACTION_LABELS[type] || type}
+                                >
+                                    <span className={isReacted ? 'scale-110' : ''}>{emoji}</span>
+                                    {count > 0 && <span>{count}</span>}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Status Badges */}
+                    <div className="flex items-center gap-2 mt-1">
+                        {outcomeInfo && (
+                            <span className={`text-xs flex items-center gap-1.5 ${outcomeInfo.color}`}>
+                                {outcomeInfo.emoji} {outcomeInfo.label}
+                            </span>
+                        )}
+                        {prediction.targetDate && (
+                            <span className="text-xs text-gray-400 flex items-center gap-1">
+                                🎯 {formatDate(prediction.targetDate)}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
+
+                {/* Right: Actions */}
                 <div className="flex items-center gap-2">
                     {/* Only show Mark Outcome if NOT ReadOnly and Pending */}
                     {!isReadOnly && prediction.outcome === 'pending' && (
@@ -240,6 +360,28 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                         </a>
                     )}
 
+                    {/* Bookmark Button */}
+                    <button
+                        onClick={toggleBookmark}
+                        className={`p-1.5 transition-all transform hover:scale-110 ${isBookmarked ? 'text-yellow-500 scale-105' : 'text-gray-400 hover:text-yellow-500'}`}
+                        title={isBookmarked ? "Remove Bookmark" : "Save Prediction"}
+                    >
+                        {isBookmarked ? (
+                            <svg className="w-6 h-6 fill-current drop-shadow-sm" viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 012 2v16l-7-4.5L7 21V5a2 2 0 01-2-2z" /></svg>
+                        ) : (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                        )}
+                    </button>
+
+                    {/* Share Button */}
+                    <Link
+                        href={`/share/${prediction.id}`}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors hover:scale-110"
+                        title="Share"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    </Link>
+
                     {/* Delete Button / Confirmation */}
                     {onDelete && (
                         showDeleteConfirm ? (
@@ -272,16 +414,13 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                             </button>
                         )
                     )}
-
-                    <Link
-                        href={`/share/${prediction.id}`}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
-                        title="Share"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                    </Link>
                 </div>
             </div>
+            <LoginModal
+                isOpen={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                message="Join the club to react and save predictions!"
+            />
         </div>
     );
 }
