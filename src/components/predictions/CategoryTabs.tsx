@@ -48,7 +48,7 @@ export default function CategoryTabs({ selected, onSelect }: CategoryTabsProps) 
                             data-active={isActive}
                             onClick={() => onSelect(tab.id)}
                             className={`
-                                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 
+                                flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 
                                 whitespace-nowrap snap-start border select-none
                                 ${isActive
                                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-transparent text-white shadow-lg shadow-blue-500/30 scale-105'
@@ -57,7 +57,7 @@ export default function CategoryTabs({ selected, onSelect }: CategoryTabsProps) 
                             `}
                         >
                             <span className={`transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-80 grayscale-[0.5]'}`}>{tab.emoji}</span>
-                            <span>{tab.label}</span>
+                            <span className="hidden sm:inline">{tab.label}</span>
                         </button>
                     );
                 })}
