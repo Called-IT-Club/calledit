@@ -252,7 +252,7 @@ function DashboardContent() {
                                     MY CALLS
                                 </h1>
                                 <p className="text-gray-500 font-medium text-sm mt-1">
-                                    Track your legacy, Oracle.
+                                    Legacy is built one call at a time.
                                 </p>
                             </div>
                         </div>

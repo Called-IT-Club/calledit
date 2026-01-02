@@ -22,7 +22,7 @@ export default function Header() {
                         <h1 className="text-2xl font-black italic tracking-tighter text-blue-700 leading-none whitespace-nowrap">
                             CALLED IT!
                         </h1>
-                        <p className="text-[10px] font-medium text-gray-500 tracking-wide">
+                        <p className="hidden sm:block text-[10px] font-medium text-gray-500 tracking-wide">
                             Join the Club. Make the Call.
                         </p>
                     </div>
@@ -33,10 +33,10 @@ export default function Header() {
                     {/* Make A Call Action - Primary */}
                     <Link
                         href="/dashboard?new_call=true"
-                        className="hidden sm:inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg mr-2"
+                        className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 sm:w-auto sm:h-auto px-0 sm:px-5 py-0 sm:py-2.5 rounded-full transition-all shadow-md hover:shadow-lg mr-2"
                     >
-                        <span>+</span>
-                        Make A Call
+                        <span className="text-xl sm:text-base font-bold leading-none mb-0.5 sm:mb-0">+</span>
+                        <span className="hidden sm:inline text-sm font-bold">Make A Call</span>
                     </Link>
 
                     {/* Dashboard Link - Only visible on Feed Page and if logged in */}
@@ -54,10 +54,10 @@ export default function Header() {
                     {!isFeed && (
                         <Link
                             href="/feed"
-                            className="text-sm font-bold px-4 py-2 rounded-full transition-all border flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent"
+                            className="inline-flex items-center justify-center gap-2 bg-white sm:bg-transparent hover:bg-gray-50 sm:hover:bg-gray-100 text-gray-700 sm:text-gray-600 hover:text-gray-900 w-10 h-10 sm:w-auto sm:h-auto px-0 sm:px-4 py-0 sm:py-2 rounded-full transition-all border border-gray-200 sm:border-transparent shadow-md sm:shadow-none"
                         >
-                            <span>👀</span>
-                            Live Feed
+                            <span className="text-2xl sm:text-base leading-none">👀</span>
+                            <span className="hidden sm:inline text-sm font-bold">Live Feed</span>
                         </Link>
                     )}
 
@@ -65,6 +65,6 @@ export default function Header() {
                     <LoginButton />
                 </div>
             </div>
-        </header>
+        </header >
     );
 }
