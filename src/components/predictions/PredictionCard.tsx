@@ -253,10 +253,24 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
             </div>
 
             {/* Footer: Reactions & Actions */}
-            <div className="flex items-end justify-between mt-4 pt-4 border-t border-gray-50">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mt-4 pt-4 border-t border-gray-50 gap-4 sm:gap-0">
 
                 {/* Left: Reactions & Status */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-row items-center justify-between gap-2 w-full sm:w-auto">
+                    {/* Status Badges */}
+                    <div className="flex items-center gap-2">
+                        {outcomeInfo && (
+                            <span className={`text-xs flex items-center gap-1.5 ${outcomeInfo.color}`}>
+                                {outcomeInfo.emoji} {outcomeInfo.label}
+                            </span>
+                        )}
+                        {prediction.targetDate && (
+                            <span className="text-xs text-gray-400 flex items-center gap-1">
+                                🎯 {formatDate(prediction.targetDate)}
+                            </span>
+                        )}
+                    </div>
+
                     {/* Reactions Bar */}
                     <div className="flex items-center gap-1">
                         {Object.entries(REACTION_TYPES).map(([type, emoji]) => {
@@ -281,25 +295,11 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                             );
                         })}
                     </div>
-
-                    {/* Status Badges */}
-                    <div className="flex items-center gap-2 mt-1">
-                        {outcomeInfo && (
-                            <span className={`text-xs flex items-center gap-1.5 ${outcomeInfo.color}`}>
-                                {outcomeInfo.emoji} {outcomeInfo.label}
-                            </span>
-                        )}
-                        {prediction.targetDate && (
-                            <span className="text-xs text-gray-400 flex items-center gap-1">
-                                🎯 {formatDate(prediction.targetDate)}
-                            </span>
-                        )}
-                    </div>
                 </div>
 
 
                 {/* Right: Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
                     {/* Only show Mark Outcome if NOT ReadOnly and Pending */}
                     {!isReadOnly && prediction.outcome === 'pending' && (
                         <div className="relative">
