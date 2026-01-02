@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+
 import { Prediction, User } from '@/types';
 import Link from 'next/link';
 import QRCode from 'react-qr-code';
