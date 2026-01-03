@@ -30,6 +30,7 @@ export default function Header() {
 
                 {/* Navigation & Auth */}
                 <div className="flex items-center gap-2">
+
                     {/* Make A Call Action - Primary */}
                     <Link
                         href="/dashboard?new_call=true"
@@ -39,14 +40,26 @@ export default function Header() {
                         <span className="hidden sm:inline text-sm font-bold">Make A Call</span>
                     </Link>
 
+                    {/* Friends Link */}
+                    {user && (
+                        <Link
+                            href="/friends"
+                            className="inline-flex items-center justify-center gap-2 bg-white sm:bg-transparent hover:bg-gray-50 sm:hover:bg-gray-100 text-gray-700 sm:text-gray-600 hover:text-gray-900 w-10 h-10 sm:w-auto sm:h-auto px-0 sm:px-4 py-0 sm:py-2 rounded-full transition-all border border-gray-200 sm:border-transparent shadow-md sm:shadow-none"
+                        >
+                            <span className="text-xl sm:text-base leading-none">👥</span>
+                            <span className="hidden sm:inline text-sm font-bold">Friends</span>
+                        </Link>
+                    )}
+
+
                     {/* Dashboard Link - Only visible on Feed Page and if logged in */}
                     {isFeed && user && (
                         <Link
                             href="/dashboard"
-                            className="text-sm font-bold px-4 py-2 rounded-full transition-all border text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent flex items-center gap-2"
+                            className="inline-flex items-center justify-center gap-2 bg-white sm:bg-transparent hover:bg-gray-50 sm:hover:bg-gray-100 text-gray-700 sm:text-gray-600 hover:text-gray-900 w-10 h-10 sm:w-auto sm:h-auto px-0 sm:px-4 py-0 sm:py-2 rounded-full transition-all border border-gray-200 sm:border-transparent shadow-md sm:shadow-none"
                         >
-                            <img src="/logo.png" alt="My Calls" className="w-5 h-5 object-contain" />
-                            My Calls
+                            <img src="/logo.png" alt="My Calls" className="w-6 h-6 object-contain" />
+                            <span className="hidden sm:inline text-sm font-bold">My Calls</span>
                         </Link>
                     )}
 

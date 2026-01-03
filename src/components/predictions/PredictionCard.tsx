@@ -36,10 +36,60 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
     const [celebrating, setCelebrating] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
+    // Challenge Mode State
+    const [showChallengeModal, setShowChallengeModal] = useState(false);
+    const [friendsList, setFriendsList] = useState<any[]>([]);
+    const [selectedFriendId, setSelectedFriendId] = useState('');
+    const [wagerTerms, setWagerTerms] = useState('');
+    const [isCreatingWager, setIsCreatingWager] = useState(false);
+
     // Optimistic UI state
     const [reactions, setReactions] = useState<Record<string, number>>(prediction.reactions || {});
     const [userReactions, setUserReactions] = useState<string[]>(prediction.userReactions || []);
     const [isBookmarked, setIsBookmarked] = useState(prediction.isBookmarked || false);
+
+    const fetchFriends = async () => {
+        try {
+            const res = await fetch('/api/friends');
+            const data = await res.json();
+            if (data.friends) setFriendsList(data.friends);
+        } catch (error) {
+            console.error('Error fetching friends:', error);
+        }
+    };
+
+    const createWager = async () => {
+        setIsCreatingWager(true);
+        try {
+            const res = await fetch('/api/wagers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    predictionId: prediction.id,
+                    friendId: selectedFriendId,
+                    terms: wagerTerms
+                })
+            });
+
+            if (res.ok) {
+                setShowChallengeModal(false);
+                setWagerTerms('');
+                setSelectedFriendId('');
+                alert('Wager Sent!');
+            } else {
+                alert('Failed to send wager');
+            }
+        } catch (error) {
+            console.error('Error creating wager:', error);
+        } finally {
+            setIsCreatingWager(false);
+        }
+    };
+
+    // Load friends when modal opens
+    if (showChallengeModal && friendsList.length === 0) {
+        fetchFriends();
+    }
 
     const getCategoryInfo = () => {
         const raw = getCategoryRaw(prediction.category);
@@ -294,14 +344,29 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                                 </button>
                             );
                         })}
+
+                        {/* Wager Button - Moved here for mobile layout */}
+                        {prediction.outcome === 'pending' && (
+                            <button
+                                onClick={() => setShowChallengeModal(true)}
+                                className="ml-1 px-2 sm:px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg hover:bg-indigo-100 hover:text-indigo-900 transition-all shadow-sm flex items-center gap-1"
+                                title="Wager with a friend on this call"
+                            >
+                                <span className="text-sm">🤝</span>
+                                <span className="hidden sm:inline">Wager</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
 
                 {/* Right: Actions */}
                 <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-                    {/* Only show Mark Outcome if NOT ReadOnly and Pending */}
-                    {!isReadOnly && prediction.outcome === 'pending' && (
+
+
+
+                    {/* Mark Outcome - Only for Owner and NOT ReadOnly */}
+                    {!isReadOnly && prediction.outcome === 'pending' && user?.id === prediction.userId && (
                         <div className="relative">
                             <button
                                 onClick={() => setShowOutcomeMenu(!showOutcomeMenu)}
@@ -383,7 +448,7 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                     </Link>
 
                     {/* Delete Button / Confirmation */}
-                    {onDelete && (
+                    {onDelete && user?.id === prediction.userId && (
                         showDeleteConfirm ? (
                             <div className="flex items-center bg-red-50 rounded px-1 animate-in slide-in-from-right-2 duration-200">
                                 <span className="text-[10px] text-red-800 font-bold mr-2 uppercase">Sure?</span>
@@ -416,11 +481,60 @@ export default function PredictionCard({ prediction, onUpdateOutcome, onDelete, 
                     )}
                 </div>
             </div>
+
             <LoginModal
                 isOpen={showLoginModal}
                 onClose={() => setShowLoginModal(false)}
                 message="Join the club to react and save predictions!"
             />
+
+            {/* Challenge Modal */}
+            {showChallengeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-bold text-gray-900">Start a Wager</h3>
+                            <button onClick={() => setShowChallengeModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Select Friend</label>
+                                <select
+                                    className="w-full border rounded-lg p-2 text-sm"
+                                    value={selectedFriendId}
+                                    onChange={(e) => setSelectedFriendId(e.target.value)}
+                                >
+                                    <option value="">Choose a friend...</option>
+                                    {friendsList.map(f => (
+                                        <option key={f.id} value={f.friend.id} className="text-gray-900">
+                                            {f.friend.full_name || f.friend.username || 'Unknown Friend'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Stakes (What do you win?)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Lunch, Bragging Rights"
+                                    className="w-full border rounded-lg p-2 text-sm"
+                                    value={wagerTerms}
+                                    onChange={(e) => setWagerTerms(e.target.value)}
+                                />
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    onClick={createWager}
+                                    disabled={!selectedFriendId || !wagerTerms || isCreatingWager}
+                                    className="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isCreatingWager ? 'Sending Wager...' : 'Send Wager 🤝'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
